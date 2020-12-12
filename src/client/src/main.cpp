@@ -3,10 +3,11 @@
 #include <database/DBMS.hpp>
 #include <string>
 #include <commands/source.hpp>
+#include <string_view>
 
-auto define_options()
+auto define_options(const std::string_view program_name)
 {
-    cxxopts::Options opts("database",
+    cxxopts::Options opts(program_name.data(),
                           "Client app for indexed-sequential file structure");
     opts.add_options() /**/
         ("p,prefix",
@@ -44,7 +45,7 @@ auto unpack_required_options(cxxopts::ParseResult& parse_result)
 
 int main(int argc, const char* argv[])
 {
-    auto opts = define_options();
+    auto opts = define_options(argv[0]);
     auto result = opts.parse(argc, argv);
     if (result.count("help"))
     {
@@ -54,7 +55,8 @@ int main(int argc, const char* argv[])
 
     try
     {
-        auto&& [files_prefix, commands_source] = unpack_required_options(result);
+        auto&& [files_prefix, commands_source] =
+            unpack_required_options(result);
         db::DBMS dbms(files_prefix, commands_source);
         dbms.Run();
     }
