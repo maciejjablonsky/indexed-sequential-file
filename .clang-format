@@ -1,0 +1,18 @@
+---
+BasedOnStyle:  Google
+---
+Language: Cpp
+ColumnLimit: 100
+AlignTrailingComments: true
+AllowShortFunctionsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
+BreakBeforeBinaryOperators: false
+IndentWidth: 4
+SortIncludes: false
+NamespaceIndentation: Inner
+BreakBeforeBraces: Allman
+PointerAlignment: Left
+BreakConstructorInitializersBeforeComma: false
+KeepEmptyLinesAtTheStartOfBlocks: true
+Standard:       Latest
