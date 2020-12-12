@@ -1,23 +1,18 @@
-#ifndef INTERPRETER_HPP
+#ifndef COMMANDS_INTERPRETER_HPP
+#define COMMANDS_INTERPRETER_HPP
 
-#include <variant>
-#include <string>
+#include <commands/source.hpp>
 
-namespace tui
+namespace commands
 {
-struct commands_file
-{
-    std::string path;
-};
-struct commands_prompt
-{
-};
-using commands_src = std::variant<commands_file, commands_prompt>;
-
 class Interpreter
 {
+   public:
+    Interpreter(commands::source& source);
 
+   private:
+    commands::source* source_;
 };
-}  // namespace tui
+}  // namespace commands
 
-#endif  // INTERPRETER_HPP
+#endif  // COMMANDS_INTERPRETER_HPP

@@ -6,6 +6,7 @@ set(PRJ_LIBS
     fmt
     cxxopts
     database
+    commands
 )
 
 add_executable_target(

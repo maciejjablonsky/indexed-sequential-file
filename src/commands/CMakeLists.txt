@@ -1,10 +1,11 @@
 set(PRJ_SOURCES
-    include/commands/FileReader.hpp
+    src/FileReader.hpp
     src/FileReader.cpp
     include/commands/Interpreter.hpp
     src/Interpreter.cpp
-    include/commands/Prompt.hpp
+    src/Prompt.hpp
     src/Prompt.cpp
+    include/commands/source.hpp
 )
 
 set(PRJ_PRIVATE_LIBS

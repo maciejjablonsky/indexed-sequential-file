@@ -1,12 +1,13 @@
 set(PRJ_SOURCES
     include/database/Database.hpp
     src/Database.cpp
-    include/database/Dbms.hpp
-    src/Dbms.cpp
+    include/database/DBMS.hpp
+    src/DBMS.cpp
 )
 
 set(PRJ_PRIVATE_LIBS
     commands
+    fmt
 )
 
 add_lib_target(
