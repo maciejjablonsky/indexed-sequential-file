@@ -61,6 +61,9 @@ void db::DBMS::DispatchCommand(commands::possible_command& command)
                    [](commands::command_exit& c) { fmt::print("Exiting\n"); },
                    [](commands::command_unknown& c) {
                        fmt::print("Unknown command\n");
+                   },
+                   [](commands::command_delete& c) {
+                       fmt::print("Deleting record - key: {}\n", c.key);
                    }},
         command);
 }
