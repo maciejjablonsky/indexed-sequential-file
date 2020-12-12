@@ -3,7 +3,7 @@ project(index-sequential-file CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CXX_EXTENSIONS OFF)
-set_property(GLOBAL PROPERTY USE_FOLDERS)
+set_property(GLOBAL PROPERTY USE_FOLDERS TRUE)
 
 if ($<CONFIG:Release)
     if (MSVC)

@@ -7,7 +7,7 @@ function(add_lib_target PRJ_NAME)
     set(SHARED_HEADERS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/)
     if(NOT EXISTS ${SHARED_HEADERS_DIR})
         message(FATAL_ERROR "Shared sources directory for project '${PRJ_NAME}' does not exist! Path: ${SHARED_HEADERS_DIR}")
-    if()
+    endif()
 
     cmake_parse_arguments(
         PARSED_ARGS # prefix of output variables
