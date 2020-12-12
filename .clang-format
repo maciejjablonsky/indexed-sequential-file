@@ -2,7 +2,7 @@
 BasedOnStyle:  Google
 ---
 Language: Cpp
-ColumnLimit: 100
+ColumnLimit: 80
 AlignTrailingComments: true
 AllowShortFunctionsOnASingleLine: true
 AllowShortIfStatementsOnASingleLine: true
