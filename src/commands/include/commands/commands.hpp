@@ -12,11 +12,11 @@ namespace commands
 {
 struct command_read
 {
-    int64_t key;
+    uint32_t key;
 };
 struct command_write
 {
-    int64_t key;
+    uint32_t key;
     int record;
 };
 struct command_show
@@ -33,9 +33,14 @@ struct command_exit
 {
 };
 
+struct command_delete
+{
+    uint32_t key;
+};
+
 using possible_command =
     std::variant<command_read, command_write, command_show, command_reorganize,
-                 command_unknown, command_exit>;
+                 command_unknown, command_exit, command_delete>;
 
 namespace
 {
@@ -49,7 +54,8 @@ namespace
                 {"show", []() { return command_show{}; }},
                 {"reorganize", []() { return command_reorganize{}; }},
                 {"exit", []() { return command_exit{}; }},
-                {"quit", []() { return command_exit{}; }}};
+                {"quit", []() { return command_exit{}; }},
+                {"delete", []() { return command_delete{}; }}};
         auto result = possibilities.find(command);
         if (result == possibilities.end())
         {
