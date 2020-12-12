@@ -1,6 +1,6 @@
 [submodule "3rdParty/fmt"]
 	path = 3rdParty/fmt
 	url = https://github.com/fmtlib/fmt.git
-[submodule ".\\3rdParty\\cxxopts"]
-	path = .\\3rdParty\\cxxopts
+[submodule "3rdParty/cxxopts"]
+	path = 3rdParty/cxxopts
 	url = https://github.com/jarro2783/cxxopts.git
