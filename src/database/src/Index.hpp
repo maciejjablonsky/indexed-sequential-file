@@ -3,7 +3,8 @@
 
 #include <database/Key.hpp>
 #include "Link.hpp"
-#include <map>
+#include <vector>
+#include <utility>
 namespace db
 {
 class Index
@@ -16,7 +17,7 @@ class Index
     void Serialize(const std::string_view path) const;
 
    private:
-    std::map<area::Key, area::Link> lookup_table_;
+    std::vector<std::pair<area::Key, area::Link>> lookup_table_;
 };
 }  // namespace db
 

@@ -13,3 +13,8 @@ area::Link db::Index::LookUp(const area::Key key) const
     }
     return it->second;
 }
+
+void db::Index::Add(const area::Key key, const area::Link link)
+{
+    lookup_table_.emplace_back(key, link);
+}
