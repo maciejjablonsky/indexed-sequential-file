@@ -9,7 +9,7 @@ namespace area
 {
 struct Key
 {
-    int value = -1;
+    int32_t value = -1;
     auto operator<=>(const area::Key& lhs) const = default;
     friend std::stringstream& operator>>(std::stringstream& ss, area::Key& key);
     operator std::string() const;

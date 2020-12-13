@@ -12,7 +12,7 @@ class Index
    public:
     Index() = default;
     Index(const std::string_view path);
-    area::Link LookUp(const area::Key key) const;
+    [[nodiscard]] area::Link LookUp(const area::Key key) const;
     void Add(const area::Key key, const area::Link link);
     void Serialize(const std::string_view path) const;
 

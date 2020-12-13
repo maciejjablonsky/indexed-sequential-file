@@ -7,7 +7,8 @@
 #include "Link.hpp"
 #include <database/Key.hpp>
 #include "Entry.hpp"
-
+#include "EntryPage.hpp"
+#include <fstream>
 template <typename T>
 using optref = std::optional<std::reference_wrapper<T>>;
 namespace area
@@ -15,9 +16,18 @@ namespace area
 class Area
 {
    public:
-    optref<area::Entry> FetchEntry(const area::Link link);
-    optref<area::Entry> FetchNextEntry(const area::Link link);
+    Area() = default;
+    Area(std::string_view path, int page_size);
+    [[nodiscard]] optref<const area::Entry> FetchEntry(const area::Link link);
+    [[nodiscard]] optref<const area::Entry> FetchNextEntry(const area::Link link);
+    void AttachFile(std::string_view path);
 
+   private:
+    std::optional<std::vector<std::byte>> ReadDiskPage(int idx);
+    std::unique_ptr<std::fstream> file_;
+    int current_page_idx_;
+    int page_size_;
+    std::optional<area::EntryPage> current_page_;
 };
 }  // namespace area
 #endif  // DATABASE_AREA_HPP

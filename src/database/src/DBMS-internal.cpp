@@ -47,9 +47,9 @@ void db::DBMSInternal::DispatchCommand(commands::possible_command&& command)
 {
     std::visit(
         overloaded{[&](commands::command_read&& c) {
-                       db_.Read(c.key);
                        fmt::print("Reading record - key: {}\n",
                                   static_cast<std::string>(c.key));
+                       auto record = db_.Read(c.key);
                    },
                    [](commands::command_write&& c) {
                        fmt::print("Writing record - key: {}, value: {}\n",

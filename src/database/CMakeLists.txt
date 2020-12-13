@@ -17,6 +17,8 @@ set(PRJ_SOURCES
     src/Index.cpp
     src/Area.hpp
     src/Area.cpp
+    src/EntryPage.hpp
+    src/EntryPage.cpp
 )
 
 set(PRJ_PRIVATE_LIBS
