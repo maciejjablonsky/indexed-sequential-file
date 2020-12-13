@@ -3,11 +3,13 @@ set(PRJ_SOURCES
     src/Database.cpp
     include/database/DBMS.hpp
     src/DBMS.cpp
-    include/database/Entry.hpp
+    src/Entry.hpp
     src/Entry.cpp
     include/database/Link.hpp
     include/database/Record.hpp
     include/database/Key.hpp
+    src/Index.hpp
+    src/Index.cpp
 )
 
 set(PRJ_PRIVATE_LIBS

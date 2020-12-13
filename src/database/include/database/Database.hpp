@@ -4,14 +4,15 @@
 #include <database/Link.hpp>
 #include <database/Key.hpp>
 #include <utility>
-
+#include <optional>
+#include <functional>
 namespace db
 
 {
 class DataBase
 {
    public:
-    const area::Record& Read(const area::Link link);
+    std::optional<std::reference_wrapper<const area::Record>> Read(const area::Key key);
     void Write(const area::Key key, const area::Record& record);
     void Delete(const area::Key key);
     void Reorganize();
