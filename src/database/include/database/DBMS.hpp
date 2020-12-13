@@ -1,22 +1,22 @@
 #ifndef DATABASE_DBMS_HPP
 #define DATABASE_DBMS_HPP
-#include <database/Database.hpp>
-#include <commands/Interpreter.hpp>
 #include <commands/commands.hpp>
+#include <commands/source.hpp>
+
 
 namespace db
 {
-const static auto inline DEFAULT_CONFIG_PATH = "dbms_config.json";
+class DBMSInternal;
 class DBMS
 {
    public:
     DBMS(const std::string_view filenames_prefix, commands::source& src);
     void Run();
     void DispatchCommand(commands::possible_command & command);
+    ~DBMS();
 
    private:
-    DataBase db_;
-    commands::Interpreter commands_interpreter_;
+    DBMSInternal* impl_;
 };
 }  // namespace db
 

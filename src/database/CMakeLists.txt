@@ -1,15 +1,20 @@
 set(PRJ_SOURCES
-    include/database/Database.hpp
+    src/Database.hpp
     src/Database.cpp
     include/database/DBMS.hpp
     src/DBMS.cpp
+    src/DBMS-internal.hpp
+    src/DBMS-internal.cpp
+    src/DBMS.cpp
     src/Entry.hpp
     src/Entry.cpp
-    include/database/Link.hpp
+    src/Link.hpp
     include/database/Record.hpp
     include/database/Key.hpp
     src/Index.hpp
     src/Index.cpp
+    src/Area.hpp
+    src/Area.cpp
 )
 
 set(PRJ_PRIVATE_LIBS

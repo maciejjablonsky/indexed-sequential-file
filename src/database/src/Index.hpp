@@ -2,7 +2,7 @@
 #define DATABASE_INDEX_HPP
 
 #include <database/Key.hpp>
-#include <database/Link.hpp>
+#include "Link.hpp"
 
 namespace db
 {

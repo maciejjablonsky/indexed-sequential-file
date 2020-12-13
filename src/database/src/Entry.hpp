@@ -1,7 +1,7 @@
 #ifndef DATABASE_AREA_ENTRY_HPP
 #define DATABASE_AREA_ENTRY_HPP
 
-#include <database/Link.hpp>
+#include "Link.hpp"
 #include <database/Record.hpp>
 #include <database/Key.hpp>
 #include <compare>

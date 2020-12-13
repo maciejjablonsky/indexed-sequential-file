@@ -1,4 +1,4 @@
-#include <database/Entry.hpp>
+#include "Entry.hpp" 
 
 auto area::Entry::operator<=>(const Entry& other) const
 {
