@@ -17,11 +17,11 @@ class DataBase
 {
 
    public:
+    DataBase(const std::string_view filenames_prefix);
     optref<const area::Record> Read(const area::Key key);
     bool Write(const area::Key key, const area::Record& record);
     void Delete(const area::Key key);
     void Reorganize();
-    std::pair<area::Key, area::Record> FetchNext(const area::Key key);
 
    private:
     db::Index index_;

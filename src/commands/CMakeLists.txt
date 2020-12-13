@@ -11,6 +11,7 @@ set(PRJ_SOURCES
 
 set(PRJ_PRIVATE_LIBS
     fmt
+    database
 )
 
 add_lib_target(

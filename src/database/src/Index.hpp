@@ -9,7 +9,11 @@ namespace db
 class Index
 {
    public:
+    Index(int page_size);
+    Index(const std::string_view path);
     area::Link LookUp(const area::Key key) const;
+    void Serialize(const std::string_view path) const;
+
 };
 }  // namespace db
 

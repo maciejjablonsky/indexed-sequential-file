@@ -6,18 +6,20 @@
 #include <string>
 #include <string_view>
 #include <functional>
+#include <database/Key.hpp>
+#include <database/Record.hpp>
 
 using namespace std::string_view_literals;
 namespace commands
 {
 struct command_read
 {
-    uint32_t key;
+    area::Key key;
 };
 struct command_write
 {
-    uint32_t key;
-    int record;
+    area::Key key;
+    area::Record record;
 };
 struct command_show
 {
@@ -35,7 +37,7 @@ struct command_exit
 
 struct command_delete
 {
-    uint32_t key;
+    area::Key key;
 };
 
 using possible_command =

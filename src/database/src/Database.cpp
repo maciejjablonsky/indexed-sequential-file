@@ -8,6 +8,8 @@ struct overloaded : Ts...
 template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
+db::DataBase::DataBase(const std::string_view filenames_prefix) {}
+
 optref<const area::Record> db::DataBase::Read(const area::Key key)
 {
     auto link = index_.LookUp(key);

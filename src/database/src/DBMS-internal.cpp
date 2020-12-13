@@ -9,7 +9,8 @@ struct overloaded : Ts...
 template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
-db::DBMSInternal::DBMSInternal(const std::string_view filenames_prefix, commands::source& src)
+db::DBMSInternal::DBMSInternal(const std::string_view filenames_prefix,
+                               commands::source& src)
     : commands_interpreter_(src)
 {
 }
@@ -45,12 +46,15 @@ void db::DBMSInternal::Run()
 void db::DBMSInternal::DispatchCommand(commands::possible_command& command)
 {
     std::visit(
-        overloaded{[](commands::command_read& c) {
-                       fmt::print("Reading record - key: {}\n", c.key);
+        overloaded{[&](commands::command_read& c) {
+                       db_.Read(c.key);
+                       fmt::print("Reading record - key: {}\n",
+                                  static_cast<std::string>(c.key));
                    },
                    [](commands::command_write& c) {
                        fmt::print("Writing record - key: {}, value: {}\n",
-                                  c.key, c.record);
+                                  static_cast<std::string>(c.key),
+                                  static_cast<std::string>(c.record));
                    },
                    [](commands::command_reorganize& c) {
                        fmt::print("Reorganizing files\n");
@@ -63,7 +67,8 @@ void db::DBMSInternal::DispatchCommand(commands::possible_command& command)
                        fmt::print("Unknown command\n");
                    },
                    [](commands::command_delete& c) {
-                       fmt::print("Deleting record - key: {}\n", c.key);
+                       fmt::print("Deleting record - key: {}\n",
+                                  static_cast<std::string>(c.key));
                    }},
         command);
 }
