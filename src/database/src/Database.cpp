@@ -1,4 +1,9 @@
 #include "Database.hpp"
+#include <nlohmann/json.hpp>
+#include <fstream>
+#include <fmt/format.h>
+
+using json = nlohmann::json;
 
 template <class... Ts>
 struct overloaded : Ts...
@@ -9,6 +14,21 @@ template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
 db::DataBase::DataBase(const std::string_view filenames_prefix) {}
+
+bool db::DataBase::Initialize(const std::string& config_path)
+{
+    std::ifstream ifs(config_path);
+    json j = json::parse(ifs);
+    try{
+        autoreorganization_ = j["autoreorganization"];
+
+    }catch(const std::exception & e)
+    {
+        fmt::print("Database configuration in invalid format. {}\n", e.what());
+        return false;
+    }
+    return true;
+}
 
 optref<const area::Record> db::DataBase::Read(const area::Key key)
 {
