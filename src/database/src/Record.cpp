@@ -1,4 +1,4 @@
-#include "Record.hpp"
+#include <database/Record.hpp>
 #include <fmt/format.h>
 
 std::stringstream& area::operator>>(std::stringstream& ss, area::Record& record)

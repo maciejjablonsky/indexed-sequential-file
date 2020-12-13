@@ -11,7 +11,7 @@ overloaded(Ts...) -> overloaded<Ts...>;
 
 db::DBMSInternal::DBMSInternal(const std::string_view filenames_prefix,
                                commands::source& src)
-    : commands_interpreter_(src)
+    : commands_interpreter_(src), db_(filenames_prefix)
 {
 }
 
@@ -43,32 +43,32 @@ void db::DBMSInternal::Run()
     }
 }
 
-void db::DBMSInternal::DispatchCommand(commands::possible_command& command)
+void db::DBMSInternal::DispatchCommand(commands::possible_command&& command)
 {
     std::visit(
-        overloaded{[&](commands::command_read& c) {
+        overloaded{[&](commands::command_read&& c) {
                        db_.Read(c.key);
                        fmt::print("Reading record - key: {}\n",
                                   static_cast<std::string>(c.key));
                    },
-                   [](commands::command_write& c) {
+                   [](commands::command_write&& c) {
                        fmt::print("Writing record - key: {}, value: {}\n",
                                   static_cast<std::string>(c.key),
                                   static_cast<std::string>(c.record));
                    },
-                   [](commands::command_reorganize& c) {
+                   [](commands::command_reorganize&& c) {
                        fmt::print("Reorganizing files\n");
                    },
-                   [](commands::command_show& c) {
+                   [](commands::command_show&& c) {
                        fmt::print("Showing whole index and file\n");
                    },
-                   [](commands::command_exit& c) { fmt::print("Exiting\n"); },
-                   [](commands::command_unknown& c) {
+                   [](commands::command_exit&& c) { fmt::print("Exiting\n"); },
+                   [](commands::command_unknown&& c) {
                        fmt::print("Unknown command\n");
                    },
-                   [](commands::command_delete& c) {
+                   [](commands::command_delete&& c) {
                        fmt::print("Deleting record - key: {}\n",
                                   static_cast<std::string>(c.key));
                    }},
-        command);
+        std::move(command));
 }

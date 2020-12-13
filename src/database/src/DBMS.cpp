@@ -10,6 +10,6 @@ db::DBMS::~DBMS() { delete impl_; }
 
 void db::DBMS::Run() { impl_->Run(); }
 
-void db::DBMS::DispatchCommand(commands::possible_command& command) {
-    impl_->DispatchCommand(command);
+void db::DBMS::DispatchCommand(commands::possible_command&& command) {
+    impl_->DispatchCommand(std::move(command));
 }

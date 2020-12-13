@@ -12,7 +12,7 @@ class DBMS
    public:
     DBMS(const std::string_view filenames_prefix, commands::source& src);
     void Run();
-    void DispatchCommand(commands::possible_command & command);
+    void DispatchCommand(commands::possible_command && command);
     ~DBMS();
 
    private:
