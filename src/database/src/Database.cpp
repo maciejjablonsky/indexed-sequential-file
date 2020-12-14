@@ -2,6 +2,7 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <fmt/format.h>
+#include <filesystem>
 
 using json = nlohmann::json;
 
@@ -13,20 +14,25 @@ struct overloaded : Ts...
 template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
-db::DataBase::DataBase(const std::string_view filenames_prefix) {}
 
-bool db::DataBase::Initialize(const std::string& config_path)
+bool db::DataBase::Initialize(const std::string& name, const std::string_view config_path)
 {
-    std::ifstream ifs(config_path);
-    json j = json::parse(ifs);
-    try{
-        autoreorganization_ = j["autoreorganization"];
+    std::filesystem::create_directory(name);
+    auto path = fmt::format("{}/{}.", name, name);
+    index_.Deserialize(path + "index");
+    primary_.AttachFile(path + "primary", page_size_);
+    overflow_.AttachFile(path + "overflow", page_size_);
+    //std::ifstream ifs(config_path.data());
+    //json j = json::parse(ifs);
+    //try{
+    //    autoreorganization_ = j["autoreorganization"];
 
-    }catch(const std::exception & e)
-    {
-        fmt::print("Database configuration in invalid format. {}\n", e.what());
-        return false;
-    }
+    //}catch(const std::exception & e)
+    //{
+    //    fmt::print("Database configuration in invalid format. {}\n", e.what());
+    //    return false;
+    //}
+
     return true;
 }
 
@@ -88,5 +94,11 @@ bool db::DataBase::Write(const area::Key key, const area::Record& record)
     {
         return false;  // key already in database
     }
-    auto page_link = index_.LookUp(key);
+    auto link = index_.LookUp(key);
+    auto opt_entry = primary_.FetchEntry(link);
+    const auto &last_entry = opt_entry->get();
+    while (opt_entry)
+    {
+
+    }
 }

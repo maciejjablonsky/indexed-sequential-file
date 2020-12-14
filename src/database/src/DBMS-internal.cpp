@@ -9,35 +9,39 @@ struct overloaded : Ts...
 template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
-db::DBMSInternal::DBMSInternal(const std::string_view filenames_prefix,
+db::DBMSInternal::DBMSInternal(const std::string& database_name,
                                commands::source& src)
-    : commands_interpreter_(src), db_(filenames_prefix)
+    : commands_interpreter_(src)
 {
+    if (!db_.Initialize(database_name))
+    {
+        throw std::runtime_error("Failed to initialize database.");
+    }
 }
 
 void db::DBMSInternal::Run()
 {
-    enum class processing_state
+    enum class process
     {
         running,
         exit,
         empty_buffer
-    } state = processing_state::empty_buffer;
-    while (state != processing_state::exit)
+    } state = process::empty_buffer;
+    while (state != process::exit)
     {
         switch (state)
         {
-            case processing_state::running:
+            case process::running:
                 DispatchCommand(commands_interpreter_.PopCommand());
                 state = commands_interpreter_.CountBufferedCommands()
-                            ? processing_state::running
-                            : processing_state::empty_buffer;
+                            ? process::running
+                            : process::empty_buffer;
                 break;
-            case processing_state::empty_buffer:
+            case process::empty_buffer:
                 commands_interpreter_.LoadCommands();
                 state = commands_interpreter_.EndOfCommands()
-                            ? processing_state::exit
-                            : processing_state::running;
+                            ? process::exit
+                            : process::running;
                 break;
         }
     }

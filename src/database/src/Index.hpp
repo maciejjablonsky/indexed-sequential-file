@@ -7,17 +7,21 @@
 #include <utility>
 namespace db
 {
+struct key_link
+{
+    area::Key key;
+    area::Link link;
+};
 class Index
 {
    public:
-    Index() = default;
-    Index(const std::string_view path);
     [[nodiscard]] area::Link LookUp(const area::Key key) const;
     void Add(const area::Key key, const area::Link link);
-    void Serialize(const std::string_view path) const;
+    void Serialize(const std::string& path) const;
+    void Deserialize(const std::string& path);
 
    private:
-    std::vector<std::pair<area::Key, area::Link>> lookup_table_;
+    std::vector<key_link> lookup_table_;
 };
 }  // namespace db
 

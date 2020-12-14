@@ -20,12 +20,16 @@ class EntryPage
     void Write(area::Entry&& entry);
     void Write(area::Entry&& entry, int idx);
     void SetMemory(std::vector<std::byte>&& memory);
+    [[nodiscard]] inline bool IsDirty() const;
+    void SetDirty();
+    void ClearDirty();
+    std::byte* Data();
 
    private:
     area::Entry& GetEntry(int idx);
     int page_size_ = 0;
     int max_records_number_ = 0;
-    bool dirty = false;
+    bool dirty_ = false;
     std::vector<std::byte> memory_;
     EntryPageHeader* header_ = nullptr;
 };

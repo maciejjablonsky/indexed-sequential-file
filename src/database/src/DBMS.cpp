@@ -1,8 +1,8 @@
 #include <database/DBMS.hpp>
 #include "DBMS-internal.hpp"
 
-db::DBMS::DBMS(const std::string_view filenames_prefix, commands::source& src)
-    : impl_(new DBMSInternal(filenames_prefix, src))
+db::DBMS::DBMS(const std::string& database_name, commands::source& src)
+    : impl_(new DBMSInternal(database_name, src))
 {
 }
 

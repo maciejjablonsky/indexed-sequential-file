@@ -3,7 +3,7 @@
 area::EntryPage::EntryPage(int page_size)
     : page_size_(page_size),
       max_records_number_(
-          (page_size_ - sizeof(area::EntryPageHeader) / sizeof(area::Entry))),
+          (page_size_ - sizeof(area::EntryPageHeader)) / sizeof(area::Entry)),
       memory_(page_size),
       header_(reinterpret_cast<area::EntryPageHeader*>(memory_.data()))
 {
@@ -12,7 +12,7 @@ area::EntryPage::EntryPage(int page_size)
 area::EntryPage::EntryPage(std::vector<std::byte>&& memory)
     : page_size_(memory.size()),
       max_records_number_(
-          (page_size_ - sizeof(area::EntryPageHeader) / sizeof(area::Entry))),
+          (page_size_ - sizeof(area::EntryPageHeader)) / sizeof(area::Entry)),
       memory_(std::move(memory)),
       header_(reinterpret_cast<area::EntryPageHeader*>(memory_.data()))
 {
@@ -33,7 +33,7 @@ const area::Entry & area::EntryPage::Read(int idx)
 
 void area::EntryPage::Write(area::Entry&& new_entry, int idx)
 {
-    dirty = true;
+    dirty_ = true;
     if (idx >= max_records_number_ || idx > header_->records_number)
     {
         throw std::out_of_range("Cannot write record so far.");
@@ -42,6 +42,14 @@ void area::EntryPage::Write(area::Entry&& new_entry, int idx)
     entry_place = std::move(new_entry);
     header_->records_number += (idx == header_->records_number);
 }
+
+bool area::EntryPage::IsDirty() const { return dirty_; }
+
+void area::EntryPage::SetDirty() { dirty_ = true; }
+
+void area::EntryPage::ClearDirty() { dirty_ = false; }
+
+std::byte* area::EntryPage::Data() { return memory_.data(); }
 
 void area::EntryPage::Write(area::Entry&& new_entry)
 {

@@ -10,7 +10,7 @@ class DBMSInternal;
 class DBMS
 {
    public:
-    DBMS(const std::string_view filenames_prefix, commands::source& src);
+    DBMS(const std::string& database_name, commands::source& src);
     void Run();
     void DispatchCommand(commands::possible_command && command);
     ~DBMS();

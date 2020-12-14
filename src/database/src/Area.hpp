@@ -16,17 +16,17 @@ namespace area
 class Area
 {
    public:
-    Area() = default;
-    Area(std::string_view path, int page_size);
     [[nodiscard]] optref<const area::Entry> FetchEntry(const area::Link link);
     [[nodiscard]] optref<const area::Entry> FetchNextEntry(const area::Link link);
-    void AttachFile(std::string_view path);
-
+    void AttachFile(std::string_view path, int page_size);
+    [[nodiscard]] area::Link CreatePageWithEntry(area::Entry&& entry);
    private:
     std::optional<std::vector<std::byte>> ReadDiskPage(int idx);
+    void WriteDiskPage();
     std::unique_ptr<std::fstream> file_;
-    int current_page_idx_;
-    int page_size_;
+    int pages_number_ = 0;
+    int current_page_idx_ = -1;
+    int page_size_ = 4096;
     std::optional<area::EntryPage> current_page_;
 };
 }  // namespace area

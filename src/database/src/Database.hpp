@@ -17,8 +17,7 @@ class DataBase
 {
 
    public:
-    DataBase(const std::string_view filenames_prefix);
-    [[nodiscard]] bool Initialize(const std::string& config_path = "database_config.json");
+    [[nodiscard]] bool Initialize(const std::string& name, const std::string_view config_path = "database_config.json");
     [[nodiscard]] optref<const area::Record> Read(const area::Key key);
     [[nodiscard]] bool Write(const area::Key key, const area::Record& record);
     void Delete(const area::Key key);
