@@ -8,7 +8,6 @@
 #include <functional>
 #include "Index.hpp"
 #include "Area.hpp"
-#include "WriteRecordFSM.hpp"
 template <typename T>
 using optref = std::optional<std::reference_wrapper<T>>;
 namespace db
@@ -29,7 +28,7 @@ class DataBase
         const std::string_view config_path = "database_config.json");
     [[nodiscard]] optref<const area::Record> Read(area::Key key);
     [[nodiscard]] bool Insert(area::Key key, const area::Record& record);
-    void Delete(area::Key key);
+    [[nodiscard]] bool Delete(area::Key key);
     void Reorganize();
     bool Update(area::Key key, const area::Record& record);
 
@@ -41,7 +40,6 @@ class DataBase
     db::Index index_;
     area::Area primary_;
     area::Area overflow_;
-    friend class db::write_record_fsm::writing_fsm;
 };
 }  // namespace db
 

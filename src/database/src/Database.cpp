@@ -38,7 +38,7 @@ bool db::DataBase::Initialize(const std::string& name,
 
 optref<const area::Record> db::DataBase::Read(area::Key key)
 {
-    auto&&[opt_link, from] = FindEntry(key);
+    auto&& [opt_link, from] = FindEntry(key);
     switch (from)
     {
         case entry::primary:
@@ -55,6 +55,38 @@ bool db::DataBase::Insert(area::Key key, const area::Record& record)
     return false;
 }
 
+bool db::DataBase::Delete(area::Key key)
+{
+    auto&& [opt_link, from] = FindEntry(key);
+    switch (from)
+    {
+        case entry::primary:
+            primary_.FetchEntry(opt_link->get())->get().deleted = true;
+            return true;
+        case entry::overflow:
+            overflow_.FetchEntry(opt_link->get())->get().deleted = true;
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool db::DataBase::Update(area::Key key, const area::Record& record)
+{
+    auto&& [opt_link, from] = FindEntry(key);
+    switch (from)
+    {
+        case entry::primary:
+            primary_.FetchEntry(opt_link->get())->get().record = record;
+            return true;
+        case entry::overflow:
+            overflow_.FetchEntry(opt_link->get())->get().record = record;
+            return true;
+        default:
+            return false;
+    }
+}
+
 std::pair<optref<area::Link>, db::entry> db::DataBase::FindEntry(area::Key key)
 {
     auto from = db::entry::primary;
@@ -68,7 +100,7 @@ std::pair<optref<area::Link>, db::entry> db::DataBase::FindEntry(area::Key key)
         if (!opt_entry.has_value())
         {
             return {std::nullopt, db::entry::none};
-        } 
+        }
         const auto& entry = opt_entry->get();
         if (entry.key == key && !entry.deleted)
         {
