@@ -34,6 +34,7 @@ class DataBase
 
    private:
     [[nodiscard]] std::pair<optref<area::Link>, db::entry> FindEntry(area::Key key);
+    void AppendEntry(const area::Entry& entry, db::entry destination);
     float autoreorganization_ = 0.2;
     float page_utilization_ = 0.5;
     int page_size_ = 4096;

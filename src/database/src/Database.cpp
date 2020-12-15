@@ -52,7 +52,7 @@ optref<const area::Record> db::DataBase::Read(area::Key key)
 
 bool db::DataBase::Insert(area::Key key, const area::Record& record)
 {
-    return false;
+
 }
 
 bool db::DataBase::Delete(area::Key key)
