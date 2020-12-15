@@ -30,7 +30,7 @@ class DataBase
     [[nodiscard]] bool Insert(area::Key key, const area::Record& record);
     [[nodiscard]] bool Delete(area::Key key);
     void Reorganize();
-    bool Update(area::Key key, const area::Record& record);
+    [[nodiscard]] bool Update(area::Key key, const area::Record& record);
 
    private:
     [[nodiscard]] std::pair<optref<area::Link>, db::entry> FindEntry(area::Key key);
