@@ -20,14 +20,12 @@ set(PRJ_SOURCES
     src/Area.cpp
     src/EntryPage.hpp
     src/EntryPage.cpp
-    src/WriteRecordFSM.hpp
 )
 
 set(PRJ_PRIVATE_LIBS
     commands
     fmt
     nlohmann_json::nlohmann_json
-    mp::fsm
 )
 
 add_lib_target(
