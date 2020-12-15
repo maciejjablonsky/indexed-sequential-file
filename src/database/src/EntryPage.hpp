@@ -15,18 +15,20 @@ class EntryPage
     EntryPage() = default;
     EntryPage(int page_size);
     EntryPage(std::vector<std::byte>&& memory);
-    [[nodiscard]] inline int HowManyWillFit() const;
-    [[nodiscard]] const area::Entry& Read(int idx);
+    [[nodiscard]] inline int HowManyWillFit() const
+    {
+        return max_records_number_ - header_->records_number;
+    }
+    [[nodiscard]] area::Entry& AccessEntry(int idx);
     void Write(area::Entry&& entry);
     void Write(area::Entry&& entry, int idx);
     void SetMemory(std::vector<std::byte>&& memory);
-    [[nodiscard]] inline bool IsDirty() const;
-    void SetDirty();
-    void ClearDirty();
-    std::byte* Data();
+    [[nodiscard]] inline bool IsDirty() const { return dirty_; }
+    inline void SetDirty() { dirty_ = true; }
+    inline void ClearDirty() { dirty_ = false; }
+    inline std::byte* Data() { return memory_.data(); }
 
    private:
-    area::Entry& GetEntry(int idx);
     int page_size_ = 0;
     int max_records_number_ = 0;
     bool dirty_ = false;

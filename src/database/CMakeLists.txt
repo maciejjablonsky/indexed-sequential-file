@@ -9,6 +9,7 @@ set(PRJ_SOURCES
     src/Entry.hpp
     src/Entry.cpp
     src/Link.hpp
+    src/Link.cpp
     include/database/Record.hpp
     src/Record.cpp
     include/database/Key.hpp
@@ -19,12 +20,14 @@ set(PRJ_SOURCES
     src/Area.cpp
     src/EntryPage.hpp
     src/EntryPage.cpp
+    src/WriteRecordFSM.hpp
 )
 
 set(PRJ_PRIVATE_LIBS
     commands
     fmt
     nlohmann_json::nlohmann_json
+    mp::fsm
 )
 
 add_lib_target(

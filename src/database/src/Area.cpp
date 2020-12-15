@@ -1,4 +1,5 @@
 #include "Area.hpp"
+
 #include <filesystem>
 
 void area::Area::AttachFile(std::string_view path, int page_size)
@@ -37,44 +38,78 @@ area::Link area::Area::CreatePageWithEntry(area::Entry&& entry)
     return {current_page_idx_, 0};
 }
 
-optref<const area::Entry> area::Area::FetchEntry(const area::Link link)
+optref<const area::Entry> area::Area::ViewEntry(area::Link link)
 {
-    if (link.page_no != current_page_idx_)
+    if (link.page_no == current_page_idx_)
     {
-        if (current_page_->IsDirty())
-        {
-            WriteDiskPage();
-        }
-        auto opt_page = ReadDiskPage(link.page_no);
-        if (!opt_page)
-        {
-            return std::nullopt;
-        }
-        current_page_ = EntryPage(std::move(*opt_page));
-        current_page_idx_ = link.page_no;
+        return current_page_->AccessEntry(link.entry_index);
+    }
+    else if (link.page_no == previous_page_idx_)
+    {
+        return previous_page_->AccessEntry(link.entry_index);
+    }
+    else
+    {
+        current_page_ = ReadDiskPage(link.page_no);
+        current_page_idx_ = current_page_ ? link.page_no : -1;
     }
     if (current_page_)
     {
-        return current_page_->Read(link.entry_index);
+        return current_page_->AccessEntry(link.entry_index);
     }
     return std::nullopt;
 }
 
-optref<const area::Entry> area::Area::FetchNextEntry(const area::Link link)
+optref<const area::Entry> area::Area::ViewNextEntry(area::Link link)
 {
-    const_cast<area::Link&>(link).entry_index += 1;
+    ++link.entry_index;
+    return ViewEntry(link);
+}
+
+optref<area::Entry> area::Area::FetchEntry(area::Link link)
+{
+    auto entry = ViewEntry(link);
+    if (entry)
+    {
+        if (entry->get().link.page_no == current_page_idx_)
+        {
+            current_page_->SetDirty();
+        }
+        else
+        {
+            previous_page_->SetDirty();
+        }
+    }
+    return const_cast<area::Entry&>(entry->get());
+}
+
+optref<area::Entry> area::Area::FetchNextEntry(area::Link link)
+{
+    link.entry_index += 1;
     return FetchEntry(link);
 }
 
-std::optional<std::vector<std::byte>> area::Area::ReadDiskPage(int idx)
+void area::Area::AppendEntry(area::Entry&& entry)
 {
-    std::vector<std::byte> tmp(page_size_);
-    file_->read(reinterpret_cast<char*>(tmp.data()), page_size_);
+    // TODO
+}
+
+std::optional<area::EntryPage> area::Area::ReadDiskPage(int idx)
+{
+    if (previous_page_ && previous_page_->IsDirty())
+    {
+        WritePreviousDiskPage();
+    }
+    previous_page_ = std::move(current_page_);
+    previous_page_idx_ = current_page_idx_;
+    std::vector<std::byte> tmp_memory(page_size_);
+    file_->read(reinterpret_cast<char*>(tmp_memory.data()), page_size_);
     if (file_->eof())
     {
         return std::nullopt;
     }
-    return std::move(tmp);
+    area::EntryPage tmp_page(std::move(tmp_memory));
+    return std::move(tmp_page);
 }
 
 void area::Area::WriteDiskPage()
@@ -87,7 +122,22 @@ void area::Area::WriteDiskPage()
     {
         throw std::runtime_error("No page set to write");
     }
-    file_->seekg(current_page_idx_ * page_size_);
+    file_->seekg(static_cast<std::streampos>(current_page_idx_ * page_size_));
     file_->write(reinterpret_cast<char*>(current_page_->Data()), page_size_);
     current_page_->ClearDirty();
+}
+
+void area::Area::WritePreviousDiskPage()
+{
+    if (!file_)
+    {
+        throw std::runtime_error("No file set to write.");
+    }
+    if (!previous_page_)
+    {
+        throw std::runtime_error("No page set to write");
+    }
+    file_->seekg(static_cast<std::streampos>(previous_page_idx_ * page_size_));
+    file_->write(reinterpret_cast<char*>(previous_page_->Data()), page_size_);
+    previous_page_->ClearDirty();
 }

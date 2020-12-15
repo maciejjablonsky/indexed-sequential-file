@@ -9,6 +9,7 @@ struct Link
 {
     int32_t page_no;
     int32_t entry_index;
+    bool IsActive() const;
 };
 }  // namespace area
 
