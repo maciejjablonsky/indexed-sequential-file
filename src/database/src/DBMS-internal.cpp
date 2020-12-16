@@ -55,16 +55,24 @@ void db::DBMSInternal::DispatchCommand(commands::possible_command&& command)
                                   static_cast<std::string>(c.key));
                        auto record = db_.Read(c.key);
                    },
-                   [](commands::command_write&& c) {
+                   [&](commands::command_insert&& c) {
                        fmt::print("Writing record - key: {}, value: {}\n",
                                   static_cast<std::string>(c.key),
                                   static_cast<std::string>(c.record));
+                       if (db_.Insert(c.key, c.record))
+                       {
+                           fmt::print("Record inserted.\n");
+                       }
+                       else
+                       {
+                           fmt::print("Failed to insert record.\n");
+                       }
                    },
                    [](commands::command_reorganize&& c) {
                        fmt::print("Reorganizing files\n");
                    },
-                   [](commands::command_show&& c) {
-                       fmt::print("Showing whole index and file\n");
+                   [&](commands::command_show&& c) {
+                       db_.View();
                    },
                    [](commands::command_exit&& c) { fmt::print("Exiting\n"); },
                    [](commands::command_unknown&& c) {
@@ -73,6 +81,11 @@ void db::DBMSInternal::DispatchCommand(commands::possible_command&& command)
                    [](commands::command_delete&& c) {
                        fmt::print("Deleting record - key: {}\n",
                                   static_cast<std::string>(c.key));
+                   },
+                   [](commands::command_update&& c) {
+                       fmt::print("Updating record - key: {} with {} value\n",
+                                  static_cast<std::string>(c.key),
+                                  static_cast<std::string>(c.record));
                    }},
         std::move(command));
 }

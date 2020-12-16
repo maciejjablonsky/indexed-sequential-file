@@ -1,6 +1,7 @@
 #include "Area.hpp"
 
 #include <filesystem>
+#include <fmt/format.h>
 
 void area::Area::AttachFile(std::string_view path, int page_size)
 {
@@ -11,10 +12,7 @@ void area::Area::AttachFile(std::string_view path, int page_size)
     {
         current_page_ = EntryPage(page_size_);
         current_page_idx_ = 0;
-        pages_number_ = 0;
-        current_page_->Write({.key = {.value = -1},
-                              .record = {.time = static_cast<uint64_t>(-1)},
-                              .link = {-1, -1}});
+        pages_number_ = 1;
     }
     else
     {
@@ -25,28 +23,67 @@ void area::Area::AttachFile(std::string_view path, int page_size)
     }
 }
 
-area::Link area::Area::CreatePageWithEntry(area::Entry&& entry)
+int area::Area::HowMuchPlaceLeft(area::Link link)
 {
-    if (current_page_ && current_page_->IsDirty())
+    if (link.page_no == previous_page_idx_)
     {
-        WriteDiskPage();
+        return previous_page_->HowManyWillFit();
     }
-    current_page_ = area::EntryPage(page_size_);
-    current_page_idx_ = pages_number_;
-    ++pages_number_;
-    current_page_->Write(std::move(entry));
-    return {current_page_idx_, 0};
+    else if (link.page_no == current_page_idx_)
+    {
+        return current_page_->HowManyWillFit();
+    }
+    else
+    {
+        auto opt = ViewEntry(link);
+    }
+    return current_page_->HowManyWillFit();
+}
+
+void area::Area::View()
+{
+    area::Link link = {0, 0};
+    while (link.page_no < pages_number_)
+    {
+        auto opt_entry = ViewEntry(link);
+        if (!opt_entry)
+        {
+            return; 
+        }
+        const auto& entry = opt_entry->get();
+        do
+        {
+            fmt::print(
+                "[ {:>3} {:>3} | {:>6} | {:>15} | {:>3} {:>3} | {:<5} ]\n",
+                link.page_no, link.entry_index,
+                static_cast<std::string>(entry.key),
+                static_cast<std::string>(entry.record), entry.link.page_no,
+                entry.link.entry_index, entry.deleted);
+            ++link.entry_index;
+            opt_entry = ViewEntry(link);
+        } while (opt_entry);
+        link.entry_index = 0;
+        ++link.page_no;
+    }
 }
 
 optref<const area::Entry> area::Area::ViewEntry(area::Link link)
 {
     if (link.page_no == current_page_idx_)
     {
-        return current_page_->AccessEntry(link.entry_index);
+        if (link.entry_index < current_page_->EntriesNumber())
+        {
+            return current_page_->AccessEntry(link.entry_index);
+        }
+        return std::nullopt;
     }
     else if (link.page_no == previous_page_idx_)
     {
-        return previous_page_->AccessEntry(link.entry_index);
+        if (link.entry_index < current_page_->EntriesNumber())
+        {
+            return previous_page_->AccessEntry(link.entry_index);
+        }
+        return std::nullopt;
     }
     else
     {
@@ -55,15 +92,42 @@ optref<const area::Entry> area::Area::ViewEntry(area::Link link)
     }
     if (current_page_)
     {
-        return current_page_->AccessEntry(link.entry_index);
+        if (link.entry_index < current_page_->EntriesNumber())
+        {
+            return current_page_->AccessEntry(link.entry_index);
+        }
     }
     return std::nullopt;
 }
 
-optref<const area::Entry> area::Area::ViewNextEntry(area::Link link)
+std::pair<optref<const area::Entry>, area::Link> area::Area::ViewNextEntry(
+    area::Link link)
 {
-    ++link.entry_index;
-    return ViewEntry(link);
+    if (link.page_no >= pages_number_)
+    {
+        return {std::nullopt, {-1, -1}};
+    }
+
+    // look for index on the same page
+    area::Link next_entry_link = {.page_no = link.page_no,
+                                  .entry_index = link.entry_index + 1};
+    auto opt_entry = ViewEntry(next_entry_link);
+    if (opt_entry)
+    {
+        return {opt_entry, link};
+    }
+    
+
+
+    // check next page
+    area::Link next_page_entry_link = {.page_no = link.page_no + 1,
+                                       .entry_index = 0};
+    opt_entry = ViewEntry(next_page_entry_link);
+    if (opt_entry)
+    {
+        return {opt_entry, next_page_entry_link};
+    }
+    return {std::nullopt, next_page_entry_link};
 }
 
 optref<area::Entry> area::Area::FetchEntry(area::Link link)
@@ -89,9 +153,65 @@ optref<area::Entry> area::Area::FetchNextEntry(area::Link link)
     return FetchEntry(link);
 }
 
-void area::Area::AppendEntry(area::Entry&& entry)
+void area::Area::Insert(const area::Entry& entry, area::Link link)
 {
-    // TODO
+    auto opt_new_entry = ViewEntry(link);
+    const_cast<area::Entry&>(opt_new_entry->get()) = entry;
+}
+
+std::pair<optref<const area::Entry>, area::Link> area::Area::ViewLastEntry()
+{
+    area::Link link = {.page_no = pages_number_ - 1, .entry_index = 0};
+    auto opt_entry = ViewEntry(link);
+    if (!opt_entry)
+    {
+        return {std::nullopt, {-1, -1}};
+    }
+    link.entry_index = current_page_->EntriesNumber() - 1;
+    return {ViewEntry(link), link};
+}
+
+std::pair<optref<area::Entry>, area::Link> area::Area::FetchLastEntry()
+{
+    area::Link link = {.page_no = pages_number_ - 1, .entry_index = 0};
+    auto opt_entry = ViewEntry(link);
+    if (!opt_entry)
+    {
+        return {std::nullopt, {-1, -1}};
+    }
+    link.entry_index = current_page_->EntriesNumber() - 1;
+    return {FetchEntry(link), link};
+}
+
+std::pair<optref<const area::Entry>, area::Link>
+area::Area::ViewLastEntryOnPage(area::Link link)
+{
+    auto opt_entry = ViewEntry(link);
+    if (link.page_no == previous_page_idx_)
+    {
+        link.entry_index = previous_page_->EntriesNumber() - 1;
+        return {ViewEntry(link), link};
+    }
+    else if (link.page_no == current_page_idx_)
+    {
+        link.entry_index = current_page_->EntriesNumber() - 1;
+        return {ViewEntry(link), link};
+    }
+}
+
+area::Link area::Area::InsertOnNewPage(const area::Entry& entry)
+{
+    if (previous_page_ && previous_page_->IsDirty())
+    {
+        WritePreviousDiskPage();
+    }
+    previous_page_ = std::move(current_page_);
+    previous_page_idx_ = current_page_idx_;
+    current_page_ = area::EntryPage(page_size_);
+    ++pages_number_;
+    ++current_page_idx_;
+    current_page_->Write(entry);
+    return {current_page_idx_, 0};
 }
 
 std::optional<area::EntryPage> area::Area::ReadDiskPage(int idx)
@@ -140,4 +260,29 @@ void area::Area::WritePreviousDiskPage()
     file_->seekg(static_cast<std::streampos>(previous_page_idx_ * page_size_));
     file_->write(reinterpret_cast<char*>(previous_page_->Data()), page_size_);
     previous_page_->ClearDirty();
+}
+
+optref<area::Link> area::Area::Append(const area::Entry& entry)
+{
+    auto [opt_entry, link] = ViewLastEntry();
+    if (HowMuchPlaceLeft(link) > 0)
+    {
+        ++link.entry_index;
+        Insert(entry, link);
+        return link;
+    }
+    return std::nullopt;
+}
+
+void area::Area::AppendToPage(const area::Entry& entry, area::Link link)
+{
+    auto opt = ViewEntry(link);
+    if (link.page_no == previous_page_idx_)
+    {
+        previous_page_->Write(entry);
+    }
+    else if (link.page_no == current_page_idx_)
+    {
+        current_page_->Write(entry);
+    }
 }

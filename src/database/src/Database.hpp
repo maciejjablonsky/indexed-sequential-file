@@ -13,7 +13,7 @@ using optref = std::optional<std::reference_wrapper<T>>;
 namespace db
 
 {
-enum class entry
+enum class entry_from 
 {
     primary,
     overflow,
@@ -31,10 +31,13 @@ class DataBase
     [[nodiscard]] bool Delete(area::Key key);
     void Reorganize();
     [[nodiscard]] bool Update(area::Key key, const area::Record& record);
+    void View();
 
    private:
-    [[nodiscard]] std::pair<optref<area::Link>, db::entry> FindEntry(area::Key key);
-    void AppendEntry(const area::Entry& entry, db::entry destination);
+    [[nodiscard]] std::pair<optref<area::Link>, db::entry_from> FindEntry(
+        area::Key key);
+    area::Link AssociateWithPage(const area::Entry& entry, area::Link link);
+    area::Link AppendToOverflow(const area::Entry& entry);
     float autoreorganization_ = 0.2;
     float page_utilization_ = 0.5;
     int page_size_ = 4096;

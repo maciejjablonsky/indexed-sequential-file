@@ -19,9 +19,13 @@ class EntryPage
     {
         return max_records_number_ - header_->records_number;
     }
+    [[nodiscard]] inline int EntriesNumber() const
+    {
+        return header_->records_number;
+    }
     [[nodiscard]] area::Entry& AccessEntry(int idx);
-    void Write(area::Entry&& entry);
-    void Write(area::Entry&& entry, int idx);
+    void Write(const area::Entry& entry);
+    void Write(const area::Entry& entry, int idx);
     void SetMemory(std::vector<std::byte>&& memory);
     [[nodiscard]] inline bool IsDirty() const { return dirty_; }
     inline void SetDirty() { dirty_ = true; }

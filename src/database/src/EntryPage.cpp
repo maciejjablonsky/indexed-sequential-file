@@ -28,7 +28,7 @@ area::Entry & area::EntryPage::AccessEntry(int idx)
     return *reinterpret_cast<area::Entry*>(memory_.data() + offset);
 }
 
-void area::EntryPage::Write(area::Entry&& new_entry, int idx)
+void area::EntryPage::Write(const area::Entry& new_entry, int idx)
 {
     dirty_ = true;
     if (idx >= max_records_number_ || idx > header_->records_number)
@@ -36,11 +36,11 @@ void area::EntryPage::Write(area::Entry&& new_entry, int idx)
         throw std::out_of_range("Cannot write record so far.");
     }
     auto& entry_place = AccessEntry(idx);
-    entry_place = std::move(new_entry);
+    entry_place = new_entry;
     header_->records_number += (idx == header_->records_number);
 }
 
-void area::EntryPage::Write(area::Entry&& new_entry)
+void area::EntryPage::Write(const area::Entry& new_entry)
 {
-    Write(std::move(new_entry), header_->records_number);
+    Write(new_entry, header_->records_number);
 }
