@@ -17,9 +17,12 @@ set(PRJ_SOURCES
     src/Index.hpp
     src/Index.cpp
     src/Area.hpp
-    src/Area.cpp
     src/EntryPage.hpp
-    src/EntryPage.cpp
+    src/Primary.hpp
+    src/Primary.cpp
+    src/Overflow.cpp
+    src/Overflow.hpp
+    src/DiskAccess.hpp
 )
 
 set(PRJ_PRIVATE_LIBS

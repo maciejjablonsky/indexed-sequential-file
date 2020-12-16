@@ -1,56 +1,166 @@
-#ifndef DATABASE_AREA_HPP
-#define DATABASE_AREA_HPP
-
+#ifndef AREA_HPP
+#define AREA_HPP
+#include "EntryPage.hpp"
+#include "Link.hpp"
 #include <optional>
 #include <utility>
-#include <database/Record.hpp>
-#include "Link.hpp"
-#include <database/Key.hpp>
-#include "Entry.hpp"
-#include "EntryPage.hpp"
 #include <fstream>
+#include "DiskAccess.hpp"
+#include <type_traits>
+
 template <typename T>
 using optref = std::optional<std::reference_wrapper<T>>;
 template <typename T>
 using ref = std::reference_wrapper<T>;
+
 namespace area
 {
+template <typename T>
+struct StoredPage
+{
+    EntryPage<T> page;
+    int index;
+};
+template <typename T>
 class Area
 {
    public:
-    [[nodiscard]] optref<const area::Entry> ViewEntry(area::Link link);
-    [[nodiscard]] std::pair<optref<const area::Entry>, area::Link> ViewNextEntry(area::Link link);
-    [[nodiscard]] optref<area::Entry> FetchEntry(area::Link link);
-    [[nodiscard]] optref<area::Entry> FetchNextEntry(area::Link link);
-    void Insert(const area::Entry& entry, area::Link link);
-    optref<area::Link> Append(const area::Entry& entry);
-    void AppendToPage(const area::Entry& entry, area::Link link);
-    [[nodiscard]] std::pair<optref<const area::Entry>, area::Link>
-    ViewLastEntry();
-    [[nodiscard]] std::pair<optref<area::Entry>, area::Link> FetchLastEntry();
-    [[nodiscard]] std::pair<optref<const area::Entry>, area::Link>
-    ViewLastEntryOnPage(area::Link link);
-    [[nodiscard]] std::pair<optref<area::Entry>, area::Link>
-    FetchLastEntryOnPage(area::Link link);
-    [[nodiscard]] area::Link InsertOnNewPage(const area::Entry& entry);
-    void AttachFile(std::string_view path, int page_size);
-    [[nodiscard]] int HowMuchPlaceLeft(area::Link link);
-    void View();
-    inline int MaxEntriesNumber() const {
-        return  
-    }
+    Area() = default;
+    Area(int page_size);
+
+    void Attach(const std::string& path);
+    [[nodiscard]] bool Insert(const T& entry, area::Link link);
+
+    const T& ViewEntry(area::Link link) const;
+    T& FetchEntry(area::Link link);
+    std::pair<const T&, area::Link> ViewSubsequentEntry(area::Link link) const;
+    std::pair<T&, area::Link> FetchSubsequentEntry(area::Link link);
 
    private:
-    std::optional<area::EntryPage> ReadDiskPage(int idx);
-    void WritePreviousDiskPage();
-    void WriteDiskPage();
-    std::unique_ptr<std::fstream> file_;
-    int pages_number_ = 0;
-    int current_page_idx_ = -1;
-    int previous_page_idx_ = -1;
+    [[nodiscard]] const EntryPage<T>& ViewEntryPage(int page_no) const;
+    [[nodiscard]] EntryPage<T>& FetchEntryPage(int page_no);
+    void AddDirtyEntryPage();
+    void BufferLoadedPage() const;
+    [[nodiscard]] bool ReadEntryPage(int page_no) const;
+
+   private:
+    mutable std::unique_ptr<std::fstream> file_;
     int page_size_ = 4096;
-    std::optional<area::EntryPage> previous_page_;
-    std::optional<area::EntryPage> current_page_;
+    mutable std::optional<StoredPage<T>> loaded_;
+    mutable std::optional<StoredPage<T>> buffered_;
+    int pages_number_ = 0;
+    mutable DiskAccess counter_;
 };
+template <typename T>
+inline area::Area<T>::Area(int page_size) : page_size_(page_size), counter_({})
+{
+}
+template <typename T>
+inline void Area<T>::Attach(const std::string& path)
+{
+    file_ = std::make_unique<std::fstream>(path.c_str());
+}
+template <typename T>
+inline bool Area<T>::Insert(const T& entry, area::Link link)
+{
+    auto& page = FetchEntryPage(link.page_no);
+    page.Write(entry, link.entry_index);
+}
+template <typename T>
+inline const T& Area<T>::ViewEntry(area::Link link) const
+{
+    const auto& page = ViewEntryPage(link.page_no);
+    return page.View(link.entry_index);
+}
+template <typename T>
+inline T& Area<T>::FetchEntry(area::Link link)
+{
+    return const_cast<T&>(const_cast<const Area<T>&>(*this).ViewEntry(link));
+}
+template <typename T>
+inline std::pair<const T&, area::Link> Area<T>::ViewSubsequentEntry(
+    area::Link link) const
+{
+    const auto&
+}
+template <typename T>
+inline const EntryPage<T>& Area<T>::ViewEntryPage(int page_no) const
+{
+    if (buffered_ && buffered_->index == page_no)
+    {
+        return buffered_->page;
+    }
+    if (loaded_ && loaded_->index == page_no)
+    {
+        return loaded_->page;
+    }
+    else
+    {
+        if (!ReadEntryPage(page_no))
+        {
+            throw std::runtime_error(fmt::format(
+                "Attempted to read not existing page no {:02}", page_no));
+        }
+    }
+    return loaded_->page;
+}
+template <typename T>
+inline EntryPage<T>& Area<T>::FetchEntryPage(int page_no)
+{
+    auto& mutable_page = const_cast<area::EntryPage<T>&>(
+        const_cast<const Area<T>&>(*this).ViewEntryPage(page_no));
+    mutable_page.SetDirty();
+    return mutable_page;
+}
+template <typename T>
+inline void Area<T>::AddDirtyEntryPage()
+{
+    BufferLoadedPage();
+    loaded_ =
+        StoredPage<T>{.page = EntryPage<T>(page_size_), .index = pages_number_};
+    loaded_->page.SetDirty();
+    ++pages_number_;
+}
+template <typename T>
+inline void Area<T>::BufferLoadedPage() const
+{
+    if (buffered_ && buffered_->page.IsDirty())
+    {
+        if (!file_)
+        {
+            throw std::runtime_error("No file attached to area.");
+        }
+        file_->seekg(
+            static_cast<std::streampos>(buffered_->index * page_size_));
+        file_->write(reinterpret_cast<char*>(buffered_->page.Data()),
+                     page_size_);
+        buffered_->page.ClearDirty();
+        counter_.Write();
+    }
+    buffered_ = std::move(loaded_);
+}
+template <typename T>
+inline bool Area<T>::ReadEntryPage(int page_no) const
+{
+    if (!file_)
+    {
+        throw std::runtime_error("No file attached to area.");
+    }
+    if (page_no >= pages_number_)
+    {
+        throw std::out_of_range("Attempted to read page too far.");
+    }
+    BufferLoadedPage();
+    std::vector<std::byte> tmp_memory(page_size_);
+    file_->read(reinterpret_cast<char*>(tmp_memory.data()), page_size_);
+    if (file_->eof())
+    {
+        return false;
+    }
+    loaded_->page = area::EntryPage<T>(std::move(tmp_memory));
+    loaded_->index = page_no;
+    counter_.Read();
+    return true;
+}
 }  // namespace area
-#endif  // DATABASE_AREA_HPP
+#endif  // AREA_HPP
