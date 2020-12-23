@@ -17,12 +17,14 @@ set(PRJ_SOURCES
     src/Index.hpp
     src/Index.cpp
     src/Area.hpp
-    src/EntryPage.hpp
+    src/Page.hpp
     src/Primary.hpp
     src/Primary.cpp
     src/Overflow.cpp
     src/Overflow.hpp
     src/DiskAccess.hpp
+    src/PageDispositor.hpp
+    src/PageDispositor.cpp
 )
 
 set(PRJ_PRIVATE_LIBS
