@@ -57,8 +57,8 @@ int main(int argc, const char* argv[])
     {
         auto&& [files_prefix, commands_source] =
             unpack_required_options(result);
-        db::DBMS dbms(files_prefix, commands_source);
-        dbms.Run();
+         db::DBMS dbms(files_prefix, commands_source);
+         dbms.Run();
     }
     catch (const std::exception& e)
     {

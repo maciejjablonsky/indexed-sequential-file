@@ -1,5 +1,5 @@
-#ifndef DATABASE_DBMS_HPP
-#define DATABASE_DBMS_HPP
+#pragma once
+
 #include <commands/commands.hpp>
 #include <commands/source.hpp>
 
@@ -19,5 +19,3 @@ class DBMS
     DBMSInternal* impl_;
 };
 }  // namespace db
-
-#endif  // DATABASE_DBMS_HPP

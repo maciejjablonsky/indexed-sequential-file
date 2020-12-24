@@ -1,11 +1,12 @@
-#ifndef DATBASE_DBMS_INTERNAL_HPP
-#define DATBASE_DBMS_INTERNAL_HPP
+#pragma once
 
 #include "Database.hpp"
 #include <string_view>
 #include <commands/Interpreter.hpp>
 #include <commands/source.hpp>
 #include <commands/commands.hpp>
+#include <database/Key.hpp>
+#include <database/Record.hpp>
 
 namespace db
 {
@@ -18,9 +19,7 @@ class DBMSInternal
     void DispatchCommand(commands::possible_command&& command);
 
    private:
-    DataBase db_;
+    DataBase<key::Key, record::Record> db_;
     commands::Interpreter commands_interpreter_;
 };
 }  // namespace db
-
-#endif  // DATBASE_DBMS_INTERNAL_HPP

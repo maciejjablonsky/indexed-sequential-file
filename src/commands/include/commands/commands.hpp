@@ -1,5 +1,4 @@
-#ifndef COMMANDS_COMMANDS_HPP
-#define COMMANDS_COMMANDS_HPP
+#pragma once
 
 #include <variant>
 #include <unordered_map>
@@ -14,12 +13,12 @@ namespace commands
 {
 struct command_read
 {
-    area::Key key;
+    key::ActiveKey key;
 };
 struct command_insert
 {
-    area::Key key;
-    area::Record record;
+    key::ActiveKey key;
+    record::Record record;
 };
 struct command_show
 {
@@ -37,13 +36,13 @@ struct command_exit
 
 struct command_delete
 {
-    area::Key key;
+    key::ActiveKey key;
 };
 
 struct command_update
 {
-    area::Key key;
-    area::Record record;
+    key::ActiveKey key;
+    record::Record record;
 };
 using possible_command =
     std::variant<command_read, command_insert, command_show, command_reorganize,
@@ -73,5 +72,3 @@ namespace
     }
 }  // namespace
 }  // namespace commands
-
-#endif  // COMMANDS_COMMANDS_HPP
