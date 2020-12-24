@@ -1,17 +1,23 @@
-#ifndef DATABASE_AREA_RECORD_HPP
-#define DATABASE_AREA_RECORD_HPP
+#pragma once
 
 #include <cstdint>
 #include <compare>
 #include <sstream>
+#include <type_traits>
+#include <fmt/format.h>
+namespace record
+{
+struct Record
+{
+    uint64_t time;
+    friend std::stringstream& operator>>(std::stringstream& ss, record::Record& record);
+    inline operator std::string() const { return fmt::format("{}", time); }
+};
 
-namespace area {
-    struct Record{
-        uint64_t time = 0;
-        friend std::stringstream& operator>>(std::stringstream& ss,
-                                             area::Record& record);
-        operator std::string() const;
-    };
+inline std::stringstream& operator>>(std::stringstream& ss, record::Record& record)
+{
+    ss >> record.time;
+    return ss;
 }
-
-#endif // DATABASE_AREA_RECORD_HPP
+static_assert(std::is_trivial<Record>());
+}  // namespace record
