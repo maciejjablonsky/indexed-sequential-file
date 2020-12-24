@@ -1,50 +1,40 @@
-#ifndef DATABASE_HPP
-#define DATABASE_HPP
+#pragma once
+
 #include <database/Record.hpp>
-#include "Link.hpp"
 #include <database/Key.hpp>
 #include <utility>
 #include <optional>
-#include <functional>
 #include "Index.hpp"
-#include "Area.hpp"
+#include <concepts>
+#include <type_traits>
+#include <concepts/comparable.hpp>
+
 template <typename T>
 using optref = std::optional<std::reference_wrapper<T>>;
 namespace db
+{
 
+template <typename Key, typename Record>
+concept database_concept = requires
 {
-enum class entry_from 
-{
-    primary,
-    overflow,
-    none
+    comparable<Key>, std::is_trivial_v<Record>;
 };
-class DataBase
-{
 
+template <typename Key, typename Record>
+requires database_concept<Key, Record> class DataBase
+{
    public:
-    [[nodiscard]] bool Initialize(
-        const std::string& name,
-        const std::string_view config_path = "database_config.json");
-    [[nodiscard]] optref<const area::Record> Read(area::Key key);
-    [[nodiscard]] bool Insert(area::Key key, const area::Record& record);
-    [[nodiscard]] bool Delete(area::Key key);
-    void Reorganize();
-    [[nodiscard]] bool Update(area::Key key, const area::Record& record);
-    void View();
+    bool Setup(const std::string& prefix);
 
    private:
-    [[nodiscard]] std::pair<optref<area::Link>, db::entry_from> FindEntry(
-        area::Key key);
-    area::Link AssociateWithPage(const area::Entry& entry, area::Link link);
-    area::Link AppendToOverflow(const area::Entry& entry);
     float autoreorganization_ = 0.2;
     float page_utilization_ = 0.5;
     int page_size_ = 4096;
-    db::Index index_;
-    area::Area primary_;
-    area::Area overflow_;
+    index::Index<Key, Record> index_;
 };
+template <typename Key, typename Record>
+requires database_concept<Key, Record> inline bool DataBase<Key, Record>::Setup(const std::string& prefix)
+{
+    return index_.Setup(prefix + ".index");
+}
 }  // namespace db
-
-#endif  // DATABASE_HPP
