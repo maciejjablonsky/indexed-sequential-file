@@ -12,7 +12,7 @@ if ($<CONFIG:Release)
         add_compile_options(-O2)
     endif()
 endif()
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 include(project_utils)
 
 add_subdirectory(3rdParty)
