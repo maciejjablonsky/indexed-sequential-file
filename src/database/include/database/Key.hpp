@@ -1,19 +1,45 @@
-#ifndef DATABASE_AREA_KEY_HPP
-#define DATABASE_AREA_KEY_HPP
+#pragma once
 
 #include <compare>
 #include <sstream>
 #include <string>
+#include <numeric>
+#include <variant>
+#include <type_traits>
+#include <fmt/format.h>
+#include <overloaded/overloaded.hpp>
 
-namespace area
+namespace key
 {
-struct Key
+struct DummyKey
 {
     int32_t value = -1;
-    auto operator<=>(const area::Key& lhs) const = default;
-    friend std::stringstream& operator>>(std::stringstream& ss, area::Key& key);
-    operator std::string() const;
 };
-}  // namespace area
 
-#endif  // DATABASE_AREA_KEY_HPP
+struct ActiveKey
+{
+    int32_t value;
+    inline auto min() { return 0; }
+    inline auto max() { return std::numeric_limits<decltype(value)>::max(); }
+    auto operator<=>(const ActiveKey& rhs) const = default;
+    inline operator std::string() { return fmt::format("{}", value); }
+};
+
+
+using Key = std::variant<DummyKey, ActiveKey>;
+
+inline std::stringstream& operator<<(std::stringstream& ss, const Key& entry_key)
+{
+    std::visit(overloaded{[&](const ActiveKey& key) { ss << key.value; },
+                          [&](const DummyKey& dummy_key) { ss << dummy_key.value; }},
+               entry_key);
+    return ss;
+}
+
+inline std::stringstream& operator>>(std::stringstream& ss, ActiveKey& key)
+{
+    ss >> key.value;
+    return ss;
+}
+
+}  // namespace key
