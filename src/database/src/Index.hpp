@@ -1,54 +1,77 @@
-#ifndef DATABASE_INDEX_HPP
-#define DATABASE_INDEX_HPP
+#pragma once
 
-#include <database/Key.hpp>
-#include "Link.hpp"
 #include <vector>
 #include <utility>
-namespace db
+#include "PageDispositor.hpp"
+#include "Memory.hpp"
+#include <concepts/comparable.hpp>
+#include <map>
+#include <type_traits>
+#include <string>
+
+namespace index
 {
-struct key_link
-{
-    area::Key key;
-    area::Link link;
-};
+
 struct IndexHeader
 {
-    int primary_pages;
-    int overflow_pages;
-    int primary_entries;
-    int overflow_entries;
-    int page_size;
+    size_t links;
+    size_t primary_entries;
+    size_t overflow_entries;
 };
-struct IndexPageHeader
+
+template <typename Key, typename PageLink>
+concept index_concept = requires
 {
-    int entries_number;
+    comparable<Key>, comparable<PageLink>, std::is_integral_v<PageLink>;
 };
-enum class counter
-{
-    primary_pages,
-    overflow_pages,
-    primary_entries,
-    overflow_entries,
-    none
-};
-class Index
+
+template <typename Key, typename PageLink>
+requires index_concept<Key, PageLink> class Index
 {
    public:
-    [[nodiscard]] area::Link LookUp(const area::Key key) const;
-    void AddPrimaryPage(const area::Key key, const area::Link link);
-    void Serialize(const std::string& path) const;
-    [[nodiscard]] bool Load(const std::string& path, int page_size);
-    [[nodiscard]] bool Deserialize(const std::string& path, int page_size);
-    void Increment(counter which);
-    void Decrement(counter which);
-    [[nodiscard]] bool IsLastPage(area::Link link);
+    [[nodiscard]] bool Setup(const std::string& file_path);
+    [[nodiscard]] PageLink LookUp(const Key key) const;
+    void Add(Key key, PageLink link);
+    inline size_t Size() const { return page_links_.size(); }
+    [[nodiscard]] std::pair<size_t, size_t> Deserialize(const std::string& path);
+    void Serialize(size_t primary_entries, size_t overflow_entries);
 
    private:
-    void Reset(int page_size);
-    IndexHeader header_;
-    std::vector<key_link> lookup_table_;
+    page::PageDispositor<page::PageMemory<>> page_dispositor_;
+    std::map<Key, PageLink> page_links_;
 };
-}  // namespace db
+template <typename Key, typename PageLink>
+requires index_concept<Key, PageLink> inline bool Index<Key, PageLink>::Setup(const std::string& file_path)
+{
+    return page_dispositor_.Setup(file_path);
+}
+template <typename Key, typename PageLink>
+requires index_concept<Key, PageLink> inline PageLink Index<Key, PageLink>::LookUp(const Key key) const
+{
+    auto it = page_links_.lower_bound(key);
+    if (it == page_links_.cend())
+    {
+        --it;
+    }
+    return it->second;
+}
+template <typename Key, typename PageLink>
+requires index_concept<Key, PageLink> inline void Index<Key, PageLink>::Add(Key key, PageLink link)
+{
+    ++header_.links;
+    page_links_.insert_or_assign(key, link);
+}
 
-#endif  // DATABASE_INDEX_HPP
+template <typename Key, typename PageLink>
+requires index_concept<Key, PageLink> inline void Index<Key, PageLink>::Serialize(size_t primary_entries,
+                                                                                  size_t overflow_entries)
+{
+    IndexHeader header = {
+        .links = page_links_.size(), .primary_entries = primary_entries, .overflow_entries = overflow_entries};
+    size_t serialized_page = 0;
+    size_t serialized_entries = 0;
+    page_dispositor_.Reset();
+    auto current_page = page_dispositor_.Request(serialized_page);
+    ++serialized_page;
+}
+}  // namespace index
