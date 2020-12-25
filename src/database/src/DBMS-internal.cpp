@@ -8,11 +8,17 @@ db::DBMSInternal::DBMSInternal(const std::string& database_name, commands::sourc
     std::filesystem::create_directory(database_name);
     std::filesystem::path path = database_name;
     path /= database_name;
-    if (!db_.Setup(path.string()))
+    try
     {
-        throw std::runtime_error("Failed to initialize database.");
+        db_.Setup(path.string());
+    }
+    catch (const std::exception& e)
+    {
+        throw std::runtime_error(fmt::format("Failed to initialize database. Message:\n{}", e.what()));
     }
 }
+
+db::DBMSInternal::~DBMSInternal() { db_.Save(); }
 
 void db::DBMSInternal::Run()
 {

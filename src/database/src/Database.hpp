@@ -8,6 +8,7 @@
 #include <concepts>
 #include <type_traits>
 #include <concepts/comparable.hpp>
+#include "Link.hpp"
 
 template <typename T>
 using optref = std::optional<std::reference_wrapper<T>>;
@@ -24,17 +25,22 @@ template <typename Key, typename Record>
 requires database_concept<Key, Record> class DataBase
 {
    public:
-    bool Setup(const std::string& prefix);
+    void Setup(const std::string& prefix);
+    void Save();
 
    private:
     float autoreorganization_ = 0.2;
     float page_utilization_ = 0.5;
-    int page_size_ = 4096;
-    index::Index<Key, Record> index_;
+    index::Index<key::IndexKey, link::PageLink> index_;
 };
 template <typename Key, typename Record>
-requires database_concept<Key, Record> inline bool DataBase<Key, Record>::Setup(const std::string& prefix)
+requires database_concept<Key, Record> inline void DataBase<Key, Record>::Setup(const std::string& prefix)
 {
-    return index_.Setup(prefix + ".index");
+    auto saved_entries = index_.Setup(prefix + ".index");
+}
+template <typename Key, typename Record>
+requires database_concept<Key, Record> inline void DataBase<Key, Record>::Save()
+{
+    index_.Serialize(0xdeadbeef, 0xcafecafe);
 }
 }  // namespace db

@@ -15,6 +15,7 @@ class DBMSInternal
    public:
     DBMSInternal(const std::string& database_name,
                  commands::source& src);
+    ~DBMSInternal();
     void Run();
     void DispatchCommand(commands::possible_command&& command);
 

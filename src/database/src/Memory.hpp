@@ -25,7 +25,7 @@ class PageMemory : public continuous_memory<page_size>
 };
 
 template <size_t page_size> 
-inline PageMemory<page_size>::PageMemory(size_t index) : continuous_memory<page_size>(page_size), index_(index)
+inline PageMemory<page_size>::PageMemory(size_t index) : continuous_memory<page_size>(), index_(index)
 {
 }
 template <size_t page_size>

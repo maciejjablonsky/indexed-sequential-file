@@ -1,16 +1,29 @@
-#ifndef DATABASE_AREA_LINK_HPP
-#define DATABASE_AREA_LINK_HPP
+#pragma once
 
 #include <cstdint>
+#include <variant>
 
-namespace area
+namespace link
 {
-struct Link
+struct DisabledLink
 {
-    int32_t page_no;
-    int32_t entry_index;
-    bool IsActive() const;
 };
-}  // namespace area
 
-#endif  // DATABASE_AREA_LINK_HPP
+struct ActiveLink
+{
+    const uint32_t page;
+    const uint32_t entry;
+};
+
+struct PODLink
+{
+    uint32_t page;
+    uint32_t entry;
+};
+
+using EntryLink = std::variant<DisabledLink, ActiveLink>;
+
+using PageLink = size_t;
+
+
+}  // namespace links

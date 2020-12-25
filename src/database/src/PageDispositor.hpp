@@ -36,8 +36,21 @@ template <typename Memory>
 requires memory_access<Memory> inline bool PageDispositor<Memory>::Setup(const std::string& file_path)
 {
     file_path_ = file_path;
-    file_ = std::make_unique<std::fstream>(file_path, std::ios::binary);
-    pages_in_file_ = std::filesystem::exists(file_path) ? std::filesystem::file_size(file_path) / Memory::size : 0;
+    if (std::filesystem::exists(file_path))
+    {
+        file_ = std::make_unique<std::fstream>(file_path, std::ios::binary | std::ios::in | std::ios::out);
+        pages_in_file_ = std::filesystem::file_size(file_path) / Memory::size;
+    }
+    else
+    {
+        file_ = std::make_unique<std::fstream>(file_path,
+                                               std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc);
+        pages_in_file_ = 0;
+    }
+    if (!file_ || !file_->is_open())
+    {
+        throw std::runtime_error(fmt::format("Failed to open file: {}", file_path_));
+    }
     return true;
 }
 
@@ -58,8 +71,8 @@ requires memory_access<Memory> Memory page::PageDispositor<Memory>::Request(size
     }
     else
     {
-        file_->seekg(page_index*);
-        std::vector<std::byte> tmp(Memory::size);
+        file_->seekg(page_index * Memory::size);
+        continuous_memory<Memory::size> tmp;
         file_->read(reinterpret_cast<char*>(tmp.data()), Memory::size);
         counter_.Read();
         return {page_index, std::move(tmp)};
@@ -69,8 +82,15 @@ requires memory_access<Memory> Memory page::PageDispositor<Memory>::Request(size
 template <typename Memory>
 requires memory_access<Memory> inline void PageDispositor<Memory>::ClearFile()
 {
-    file_ = std::make_unique<std::fstream>(file_path_, std::ios::binary | std::ios::trunc);
-    pages_in_file_ = 0;
+    if (std::filesystem::exists(file_path_))
+    {
+        file_ = std::make_unique<std::fstream>(file_path_, std::ios::binary | std::ios::in |std::ios::out | std::ios::trunc);
+        if (!file_ || !file_->is_open())
+        {
+            throw std::runtime_error(fmt::format("Failed to open file at: {}\n", file_path_));
+        }
+        pages_in_file_ = 0;
+    }
 }
 
 template <typename Memory>

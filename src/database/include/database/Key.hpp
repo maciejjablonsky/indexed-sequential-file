@@ -25,6 +25,13 @@ struct ActiveKey
     inline operator std::string() { return fmt::format("{}", value); }
 };
 
+struct IndexKey
+{
+    int32_t value;
+    auto operator<=>(const IndexKey& other) const = default;
+    inline auto min() { return -1; }
+    inline auto max() { return std::numeric_limits<decltype(value)>::max(); }
+};
 
 using Key = std::variant<DummyKey, ActiveKey>;
 
