@@ -5,7 +5,6 @@
 #include <commands/Interpreter.hpp>
 #include <commands/source.hpp>
 #include <commands/commands.hpp>
-#include <database/Key.hpp>
 #include <database/Record.hpp>
 
 namespace db
@@ -20,7 +19,7 @@ class DBMSInternal
     void DispatchCommand(commands::possible_command&& command);
 
    private:
-    DataBase<key::Key, record::Record> db_;
+    DataBase<record::Record> db_;
     commands::Interpreter commands_interpreter_;
 };
 }  // namespace db

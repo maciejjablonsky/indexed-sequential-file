@@ -13,11 +13,11 @@ namespace commands
 {
 struct command_read
 {
-    key::ActiveKey key;
+    key::Key key;
 };
 struct command_insert
 {
-    key::ActiveKey key;
+    key::Key key;
     record::Record record;
 };
 struct command_show
@@ -36,12 +36,12 @@ struct command_exit
 
 struct command_delete
 {
-    key::ActiveKey key;
+    key::Key key;
 };
 
 struct command_update
 {
-    key::ActiveKey key;
+    key::Key key;
     record::Record record;
 };
 using possible_command =

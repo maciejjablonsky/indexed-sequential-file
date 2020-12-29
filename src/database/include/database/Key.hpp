@@ -1,52 +1,38 @@
 #pragma once
 
 #include <compare>
+#include <fmt/format.h>
+#include <numeric>
+#include <overloaded/overloaded.hpp>
 #include <sstream>
 #include <string>
-#include <numeric>
-#include <variant>
 #include <type_traits>
-#include <fmt/format.h>
-#include <overloaded/overloaded.hpp>
+#include <variant>
 
-namespace key
-{
-struct DummyKey
-{
-    int32_t value = -1;
-};
+namespace key {
 
-struct ActiveKey
-{
+struct Key {
     int32_t value;
-    inline auto min() { return 0; }
-    inline auto max() { return std::numeric_limits<decltype(value)>::max(); }
-    auto operator<=>(const ActiveKey& rhs) const = default;
-    inline operator std::string() { return fmt::format("{}", value); }
+    auto operator<=>(const Key &other) const = default;
+    inline decltype(value) dummy() const { return -1; }
+    inline decltype(value) min() { return 0; }
+    inline decltype(value) max() {
+        return std::numeric_limits<decltype(value)>::max();
+    }
+    inline bool IsDummy() const { return value == dummy(); }
+    operator std::string() const { return fmt::format("{}", value); }
 };
 
-struct IndexKey
-{
-    int32_t value;
-    auto operator<=>(const IndexKey& other) const = default;
-    inline auto min() { return -1; }
-    inline auto max() { return std::numeric_limits<decltype(value)>::max(); }
-};
+static_assert(std::is_trivial_v<Key>);
 
-using Key = std::variant<DummyKey, ActiveKey>;
-
-inline std::stringstream& operator<<(std::stringstream& ss, const Key& entry_key)
-{
-    std::visit(overloaded{[&](const ActiveKey& key) { ss << key.value; },
-                          [&](const DummyKey& dummy_key) { ss << dummy_key.value; }},
-               entry_key);
-    return ss;
-}
-
-inline std::stringstream& operator>>(std::stringstream& ss, ActiveKey& key)
-{
+inline std::stringstream &operator>>(std::stringstream &ss, Key &key) {
     ss >> key.value;
     return ss;
 }
 
-}  // namespace key
+inline std::stringstream &operator<<(std::stringstream &ss, Key &key) {
+    ss << key.value;
+    return ss;
+}
+
+} // namespace key

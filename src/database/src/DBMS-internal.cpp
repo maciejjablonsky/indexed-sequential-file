@@ -51,8 +51,7 @@ void db::DBMSInternal::DispatchCommand(commands::possible_command&& command)
                        fmt::print("Reading record - key: {}\n", static_cast<std::string>(c.key));
                    },
                    [&](commands::command_insert&& c) {
-                       fmt::print("Writing record - key: {}, value: {}\n", static_cast<std::string>(c.key),
-                                  static_cast<std::string>(c.record));
+                       db_.Insert(c.key, c.record);
                    },
                    [](commands::command_reorganize&& c) { fmt::print("Reorganizing files\n"); },
                    [&](commands::command_show&& c) {}, [](commands::command_exit&& c) { fmt::print("Exiting\n"); },

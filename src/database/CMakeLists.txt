@@ -8,10 +8,14 @@ set(PRJ_SOURCES
     src/DBMS-internal.cpp
     src/DBMS.cpp
     src/Index.hpp
-    src/Page.hpp
+    src/PageWithEntries.hpp
     src/DiskAccess.hpp
     src/PageDispositor.hpp
     src/Memory.hpp
+    src/Link.hpp
+    src/Area.hpp
+    src/Primary.hpp
+    src/Overflow.hpp
 )
 
 set(PRJ_PRIVATE_LIBS
@@ -19,6 +23,7 @@ set(PRJ_PRIVATE_LIBS
     fmt
     nlohmann_json::nlohmann_json
     my_concepts
+    wrappers
 )
 
 set(PRJ_PUBLIC_LIBS

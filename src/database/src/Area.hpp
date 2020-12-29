@@ -1,166 +1,162 @@
-#ifndef AREA_HPP
-#define AREA_HPP
-#include "EntryPage.hpp"
-#include "Link.hpp"
-#include <optional>
-#include <utility>
-#include <fstream>
+#pragma once
+
 #include "DiskAccess.hpp"
+#include "Link.hpp"
+#include "Memory.hpp"
+#include "PageDispositor.hpp"
+#include "PageWithEntries.hpp"
+#include <overloaded/overloaded.hpp>
 #include <type_traits>
+#include <utility>
+#include <variant>
+#include <wrappers/optref.hpp>
 
-template <typename T>
-using optref = std::optional<std::reference_wrapper<T>>;
-template <typename T>
-using ref = std::reference_wrapper<T>;
+namespace area {
 
-namespace area
-{
-template <typename T>
-struct StoredPage
-{
-    EntryPage<T> page;
-    int index;
-};
-template <typename T>
-class Area
-{
-   public:
-    Area() = default;
-    Area(int page_size);
+template <typename Entry> class Area {
+  private:
+    using clean_entries_page =
+        page::CleanPageWithEntries<page::PageMemory<>, Entry>;
+    using dirty_entries_page =
+        page::DirtyPageWithEntries<page::PageMemory<>, Entry>;
+    using entries_page = std::variant<clean_entries_page, dirty_entries_page>;
 
-    void Attach(const std::string& path);
-    [[nodiscard]] bool Insert(const T& entry, area::Link link);
+    mutable page::PageDispositor<page::PageMemory<>> page_dispositor_;
+    mutable std::optional<entries_page> loaded_page_;
+    mutable std::optional<entries_page> buffered_page_;
+    size_t stored_entries_ = 0;
 
-    const T& ViewEntry(area::Link link) const;
-    T& FetchEntry(area::Link link);
-    std::pair<const T&, area::Link> ViewSubsequentEntry(area::Link link) const;
-    std::pair<T&, area::Link> FetchSubsequentEntry(area::Link link);
-
-   private:
-    [[nodiscard]] const EntryPage<T>& ViewEntryPage(int page_no) const;
-    [[nodiscard]] EntryPage<T>& FetchEntryPage(int page_no);
-    void AddDirtyEntryPage();
-    void BufferLoadedPage() const;
-    [[nodiscard]] bool ReadEntryPage(int page_no) const;
-
-   private:
-    mutable std::unique_ptr<std::fstream> file_;
-    int page_size_ = 4096;
-    mutable std::optional<StoredPage<T>> loaded_;
-    mutable std::optional<StoredPage<T>> buffered_;
-    int pages_number_ = 0;
-    mutable DiskAccess counter_;
-};
-template <typename T>
-inline area::Area<T>::Area(int page_size) : page_size_(page_size), counter_({})
-{
-}
-template <typename T>
-inline void Area<T>::Attach(const std::string& path)
-{
-    file_ = std::make_unique<std::fstream>(path.c_str());
-}
-template <typename T>
-inline bool Area<T>::Insert(const T& entry, area::Link link)
-{
-    auto& page = FetchEntryPage(link.page_no);
-    page.Write(entry, link.entry_index);
-}
-template <typename T>
-inline const T& Area<T>::ViewEntry(area::Link link) const
-{
-    const auto& page = ViewEntryPage(link.page_no);
-    return page.View(link.entry_index);
-}
-template <typename T>
-inline T& Area<T>::FetchEntry(area::Link link)
-{
-    return const_cast<T&>(const_cast<const Area<T>&>(*this).ViewEntry(link));
-}
-template <typename T>
-inline std::pair<const T&, area::Link> Area<T>::ViewSubsequentEntry(
-    area::Link link) const
-{
-    const auto&
-}
-template <typename T>
-inline const EntryPage<T>& Area<T>::ViewEntryPage(int page_no) const
-{
-    if (buffered_ && buffered_->index == page_no)
-    {
-        return buffered_->page;
+  private:
+    void MoveLoadedToBuffer() const {
+        if (buffered_page_ &&
+            std::holds_alternative<dirty_entries_page>(*buffered_page_)) {
+            buffered_page_ = clean_entries_page(
+                std::get<dirty_entries_page>(*buffered_page_).Release());
+            page_dispositor_.Write(
+                std::get<clean_entries_page>(*buffered_page_).Memory());
+        }
+        buffered_page_ = std::move(loaded_page_);
     }
-    if (loaded_ && loaded_->index == page_no)
-    {
-        return loaded_->page;
-    }
-    else
-    {
-        if (!ReadEntryPage(page_no))
-        {
-            throw std::runtime_error(fmt::format(
-                "Attempted to read not existing page no {:02}", page_no));
+
+  protected:
+    wr::optional_ref<entries_page> LoadPage(size_t page_no) const {
+        auto is_page_loaded = [&](const entries_page &var_page) {
+            return std::visit(overloaded{[&](const auto &page) {
+                                  return page.Index() == page_no;
+                              }},
+                              var_page);
+        };
+        if (loaded_page_ && is_page_loaded(*loaded_page_)) {
+            return *loaded_page_;
+        } else if (buffered_page_ && is_page_loaded(*buffered_page_)) {
+            return *buffered_page_;
+        } else {
+            MoveLoadedToBuffer();
+            auto opt_page = page_dispositor_.Request(page_no);
+            if (opt_page) {
+                loaded_page_ = clean_entries_page(std::move(*opt_page));
+                return *loaded_page_;
+            } else {
+                loaded_page_ = std::nullopt;
+                return std::nullopt;
+            }
         }
     }
-    return loaded_->page;
-}
-template <typename T>
-inline EntryPage<T>& Area<T>::FetchEntryPage(int page_no)
-{
-    auto& mutable_page = const_cast<area::EntryPage<T>&>(
-        const_cast<const Area<T>&>(*this).ViewEntryPage(page_no));
-    mutable_page.SetDirty();
-    return mutable_page;
-}
-template <typename T>
-inline void Area<T>::AddDirtyEntryPage()
-{
-    BufferLoadedPage();
-    loaded_ =
-        StoredPage<T>{.page = EntryPage<T>(page_size_), .index = pages_number_};
-    loaded_->page.SetDirty();
-    ++pages_number_;
-}
-template <typename T>
-inline void Area<T>::BufferLoadedPage() const
-{
-    if (buffered_ && buffered_->page.IsDirty())
-    {
-        if (!file_)
-        {
-            throw std::runtime_error("No file attached to area.");
+    std::pair<wr::optional_ref<const Entry>, link::EntryLink>
+    ViewSubsequent(link::EntryLink &link) const {
+        link::EntryLink next_entry = {.page = link.page,
+                                      .entry = link.entry + 1};
+        if (auto opt_ref_entry = View(next_entry)) {
+            return {opt_ref_entry, next_entry};
         }
-        file_->seekg(
-            static_cast<std::streampos>(buffered_->index * page_size_));
-        file_->write(reinterpret_cast<char*>(buffered_->page.Data()),
-                     page_size_);
-        buffered_->page.ClearDirty();
-        counter_.Write();
+        link::EntryLink next_page_entry = {.page = link.page + 1, .entry = 0};
+        if (auto opt_ref_entry = View(next_page_entry)) {
+            return {opt_ref_entry, next_page_entry};
+        }
+        return {std::nullopt, link};
     }
-    buffered_ = std::move(loaded_);
-}
-template <typename T>
-inline bool Area<T>::ReadEntryPage(int page_no) const
-{
-    if (!file_)
-    {
-        throw std::runtime_error("No file attached to area.");
+    std::optional<link::EntryLink> AppendToPage(const Entry &entry,
+                                                link::PageLink link) {
+        auto opt_var_page = LoadPage(link);
+        if (opt_var_page) {
+            auto &var_page = wr::get_ref<entries_page>(opt_var_page);
+            if (!std::visit(overloaded{[&](const auto &page) {
+                                return page.Size() < page.Capacity();
+                            }},
+                            var_page)) {
+                return std::nullopt;
+            }
+
+            if (std::holds_alternative<clean_entries_page>(var_page)) {
+                var_page = dirty_entries_page(
+                    std::move(std::get<clean_entries_page>(var_page)));
+            }
+            auto &dirty_page = std::get<dirty_entries_page>(var_page);
+            link::EntryLink link_to_inserted = {
+                .page = link,
+                .entry = static_cast<int32_t>(dirty_page.Append(entry))};
+            ++stored_entries_;
+            return link_to_inserted;
+        }
+        return std::nullopt;
     }
-    if (page_no >= pages_number_)
-    {
-        throw std::out_of_range("Attempted to read page too far.");
+
+    link::EntryLink PushBack(const Entry &entry) {
+        link::PageLink last_page_link = {
+            static_cast<int32_t>(page_dispositor_.PagesInFile() - 1)};
+        if (auto inserted_link = AppendToPage(entry, last_page_link)) {
+            return *inserted_link;
+        } else {
+            return *AppendToPage(entry, last_page_link + 1);
+        }
     }
-    BufferLoadedPage();
-    std::vector<std::byte> tmp_memory(page_size_);
-    file_->read(reinterpret_cast<char*>(tmp_memory.data()), page_size_);
-    if (file_->eof())
-    {
-        return false;
+
+  public:
+    wr::optional_ref<const Entry> View(link::EntryLink link) const {
+        auto opt_var_page = LoadPage(link.page);
+        if (opt_var_page) {
+            return std::visit(
+                overloaded{
+                    [&](const auto &page) -> wr::optional_ref<const Entry> {
+                        if (link.entry >= page.Size()) {
+                            return std::nullopt;
+                        }
+                        return page.View(link.entry);
+                    }},
+                opt_var_page->get());
+        }
+        return std::nullopt;
     }
-    loaded_->page = area::EntryPage<T>(std::move(tmp_memory));
-    loaded_->index = page_no;
-    counter_.Read();
-    return true;
-}
-}  // namespace area
-#endif  // AREA_HPP
+
+    inline void Insert(const Entry &entry, link::EntryLink destination) {
+        auto opt_var_page = LoadPage(destination.page);
+        if (!opt_var_page) {
+            throw std::runtime_error(
+                fmt::format("Failed to load page no {}\n", destination.page));
+        }
+        auto &var_page = wr::get_ref<entries_page>(opt_var_page);
+        if (std::holds_alternative<clean_entries_page>(var_page)) {
+            var_page = dirty_entries_page(
+                std::move(std::get<clean_entries_page>(var_page)));
+        }
+
+        auto &dirty_page = std::get<dirty_entries_page>(var_page);
+        dirty_page.Write(entry, destination.entry);
+        if (destination.entry == dirty_page.Size()) {
+            ++stored_entries_;
+        }
+    }
+
+    inline void Setup(const std::string &file_path, size_t stored_entries = 0) {
+        page_dispositor_.Setup(file_path);
+        stored_entries_ = stored_entries;
+    };
+    inline size_t Size() const { return stored_entries_; }
+    inline void Save() const {
+        MoveLoadedToBuffer(); // saves buffered page if needed and moves
+                              // loaded to buffered
+        MoveLoadedToBuffer(); // saves loaded as buffered page and moves
+                              // nullopt to buffer
+    };
+};
+} // namespace area
