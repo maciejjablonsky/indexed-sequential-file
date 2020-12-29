@@ -74,7 +74,7 @@ class DirtyPageWithEntries : public PageWithEntries<PageMemory, Entry> {
             throw std::out_of_range("Page is full.");
         }
         if (idx == Size()) {
-        ++header_->entries;
+            ++header_->entries;
         }
         std::copy_n(&entry, 1,
                     reinterpret_cast<Entry *>(memory_.data() + OffsetTo(idx)));

@@ -61,7 +61,7 @@ requires overflow_concept<Entry> class Overflow : public area::Area<Entry> {
         return AppendWithoutPointing{.update = prev_link};
     }
 
-    link::OverflowEntryLink Append(const Entry &entry) { 
+    link::OverflowEntryLink Append(const Entry &entry) {
         auto link = PushBack(entry);
         return {link.page, link.entry};
     }

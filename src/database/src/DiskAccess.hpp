@@ -1,7 +1,6 @@
 #pragma once
 
-struct DiskAccess
-{
+struct DiskAccess {
     int reads;
     int writes;
     inline void Write() { ++writes; }
