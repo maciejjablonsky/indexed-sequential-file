@@ -2,13 +2,7 @@
 #include <string_view>
 #include <sstream>
 #include <type_traits>
-template <class... Ts>
-struct overloaded : Ts...
-{
-    using Ts::operator()...;
-};
-template <class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
+#include <overloaded/overloaded.hpp>
 
 commands::Interpreter::Interpreter(const commands::source& source)
     : source_(std::visit(overloaded{

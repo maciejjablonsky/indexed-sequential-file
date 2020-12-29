@@ -1,23 +1,18 @@
-#ifndef DATABASE_DBMS_HPP
-#define DATABASE_DBMS_HPP
+#pragma once
+
 #include <commands/commands.hpp>
 #include <commands/source.hpp>
 
-
-namespace db
-{
+namespace db {
 class DBMSInternal;
-class DBMS
-{
-   public:
-    DBMS(const std::string& database_name, commands::source& src);
+class DBMS {
+  public:
+    DBMS(const std::string &database_name, commands::source &src);
     void Run();
-    void DispatchCommand(commands::possible_command && command);
+    void DispatchCommand(commands::possible_command &&command);
     ~DBMS();
 
-   private:
-    DBMSInternal* impl_;
+  private:
+    DBMSInternal *impl_;
 };
-}  // namespace db
-
-#endif  // DATABASE_DBMS_HPP
+} // namespace db

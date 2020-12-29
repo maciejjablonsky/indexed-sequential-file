@@ -1,16 +1,42 @@
-#ifndef DATABASE_AREA_LINK_HPP
-#define DATABASE_AREA_LINK_HPP
+#pragma once
 
 #include <cstdint>
+#include <fmt/format.h>
+#include <overloaded/overloaded.hpp>
+#include <string>
+#include <type_traits>
+#include <variant>
 
-namespace area
-{
-struct Link
-{
-    int32_t page_no;
-    int32_t entry_index;
-    bool IsActive() const;
+namespace link {
+struct PageLink {
+    int32_t index;
+    operator decltype(index)() const { return index; }
+    template <typename T>
+    requires std::is_integral_v<T> inline PageLink operator+(T val) {
+        return {index + val};
+    }
 };
-}  // namespace area
+struct PrimaryPageLink : public PageLink {};
 
-#endif  // DATABASE_AREA_LINK_HPP
+struct OverflowPageLink : public PageLink {};
+
+struct LastPrimaryPageLink : public PageLink {};
+
+struct EntryLink {
+    int32_t page;
+    int32_t entry;
+    operator bool() const { return page >= 0 && entry >= 0; }
+    operator std::string() const {
+        return fmt::format("{{page: {}, entry: {}}}", page, entry);
+    }
+};
+
+struct PrimaryEntryLink : public EntryLink {
+    operator EntryLink() const { return {page, entry}; }
+};
+
+struct OverflowEntryLink : public EntryLink {
+    operator EntryLink() const { return {page, entry}; }
+};
+
+} // namespace link
