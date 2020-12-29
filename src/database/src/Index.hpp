@@ -143,5 +143,13 @@ template <typename Key> requires index_concept<Key> class Index {
             entries_saved += entries_to_save;
         }
     }
+    void Show() {
+        fmt::print("[{:^60}]\n", "INDEX");
+        for (const auto &[key, link] : page_links_) {
+            fmt::print("[key: {:>4}, page: {:>4}]\n", static_cast<std::string>(key),
+                       link);
+        }
+        fmt::print("\n");
+    }
 };
 } // namespace index

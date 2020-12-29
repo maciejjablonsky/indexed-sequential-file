@@ -10,11 +10,11 @@
 #include <database/Key.hpp>
 #include <database/Record.hpp>
 #include <optional>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <wrappers/optref.hpp>
 
-template <typename T> using optref = std::optional<std::reference_wrapper<T>>;
 namespace db {
 
 template <typename Record> concept database_concept = requires {
@@ -36,19 +36,18 @@ template <typename Record> struct Entry {
         return key <=> other.key;
     }
     auto operator==(const Entry &other) const { return key == other.key; }
-    // inline bool operator==(const Entry &other) const {
-    //    return key == other.key;
-    //}
+    auto operator<=>(const key::Key &key) const { return this->key <=> key; }
+    auto operator==(const key::Key &key) const { return this->key == key; }
     static Entry dummy() {
         Entry dummy = {.key = {-1}, .link = {-1, -1}};
-        memset(&dummy.record, 0xaa, sizeof(Record));
+        memset(&dummy.record, 0x00, sizeof(Record));
         return dummy;
     }
     operator std::string() const {
-        return fmt::format("{{key: {}, content: {}, pointing_to: {}}}",
-                           static_cast<std::string>(key),
-                           static_cast<std::string>(record),
-                           static_cast<std::string>(link));
+        return fmt::format(
+            "{{key: {}, content: {:>8}, pointing_to: {}, deleted: {:>6}}}",
+            static_cast<std::string>(key), static_cast<std::string>(record),
+            static_cast<std::string>(link), deleted);
     }
     Entry &operator=(const link::EntryLink &link) {
         this->link = link;
@@ -84,8 +83,6 @@ template <typename Record> requires database_concept<Record> class DataBase {
                        },
                        [&](const primary::EntryInserted &) {}},
             primary_.Append(entry, page_link));
-        fmt::print("Inserted to primary: {}\n",
-                   static_cast<std::string>(entry));
     }
 
     void AddToOverflow(Entry<Record> &entry,
@@ -104,19 +101,11 @@ template <typename Record> requires database_concept<Record> class DataBase {
                     [&](const EmptyOverflow &) {
                         primary_entry = overflow_.Append(entry);
                         primary_.Insert(primary_entry, primary_link);
-                        fmt::print("Inserted first to overflow: {}\nUpdated "
-                                   "primary: {}\n",
-                                   static_cast<std::string>(entry),
-                                   static_cast<std::string>(primary_entry));
                     },
                     [&](const FirstWasLarger &order) {
                         entry = order.point;
                         primary_entry = overflow_.Append(entry);
                         primary_.Insert(primary_entry, primary_link);
-                        fmt::print(
-                            "Inserted to overflow: {}\nUpdated primary: {}\n",
-                            static_cast<std::string>(entry),
-                            static_cast<std::string>(primary_entry));
                     },
                     [&](const AppendWithoutPointing &order) {
                         auto updated_overflow_entry =
@@ -124,10 +113,6 @@ template <typename Record> requires database_concept<Record> class DataBase {
                                 overflow_.View(order.update));
                         updated_overflow_entry = overflow_.Append(entry);
                         overflow_.Insert(updated_overflow_entry, order.update);
-                        fmt::print(
-                            "Inserted to overflow: {}\nUpdated overflow: {}\n",
-                            static_cast<std::string>(entry),
-                            static_cast<std::string>(updated_overflow_entry));
                     },
                     [&](const AppendWithPointing &order) {
                         entry = order.point;
@@ -136,19 +121,53 @@ template <typename Record> requires database_concept<Record> class DataBase {
                                 overflow_.View(order.update));
                         updated_overflow_entry = overflow_.Append(entry);
                         overflow_.Insert(updated_overflow_entry, order.update);
-                        fmt::print(
-                            "Inserted to overflow: {}\nUpdated overflow: {}\n",
-                            static_cast<std::string>(entry),
-                            static_cast<std::string>(updated_overflow_entry));
                     }},
                 look_through_result);
         } else {
             primary_entry = overflow_.Append(entry);
             primary_.Insert(primary_entry, primary_link);
-            fmt::print("Inserted to overflow: {}\nUpdated primary: {}\n",
-                       static_cast<std::string>(entry),
-                       static_cast<std::string>(primary_entry));
         }
+    }
+
+    using search_result = std::tuple<
+        wr::optional_ref<const Entry<Record>>,
+        std::variant<link::PrimaryEntryLink, link::OverflowEntryLink>>;
+    search_result FindEntry(key::Key key) {
+        auto primary_search_result =
+            primary_.LookThrough(key, index_.LookUp(key));
+        return std::visit(
+            overloaded{
+                [&](const primary::EntryAlreadyInPrimary &message) {
+                    link::PrimaryEntryLink primary_link = {message.link.page,
+                                                           message.link.entry};
+                    return search_result{primary_.View(primary_link),
+                                         primary_link};
+                },
+                [&](const primary::EntryNotFound &) {
+                    return search_result{std::nullopt,
+                                         link::PrimaryEntryLink{-1, -1}};
+                },
+                [&](const primary::EntryMightBeInOverflow &message) {
+                    auto overflow_search_result =
+                        overflow_.LookThrough(key, message.start_link);
+                    return std::visit(
+                        overloaded{[&](const overflow::EntryAlreadyInOverflow
+                                           &message) {
+                                       link::OverflowEntryLink overflow_link = {
+                                           message.link.page,
+                                           message.link.entry};
+                                       return search_result{
+                                           overflow_.View(overflow_link),
+                                           overflow_link};
+                                   },
+                                   [&](const overflow::EntryNotFound &) {
+                                       return search_result{
+                                           std::nullopt,
+                                           link::OverflowEntryLink{-1, -1}};
+                                   }},
+                        overflow_search_result);
+                }},
+            primary_search_result);
     }
 
   public:
@@ -188,6 +207,51 @@ template <typename Record> requires database_concept<Record> class DataBase {
         } catch (const std::exception &e) {
             throw std::runtime_error(
                 fmt::format("Inserting error. Message: {}\n", e.what()));
+        }
+    }
+    void Show() {
+        index_.Show();
+        fmt::print("[{:^60}]\n", "PRIMARY");
+        primary_.Show();
+        fmt::print("[{:^60}]\n", "OVERFLOW");
+        overflow_.Show();
+    }
+
+    void Read(key::Key key) {
+        auto &&[opt_entry, var_link] = FindEntry(key);
+        if (opt_entry) {
+            const auto &entry = wr::get_ref<const Entry<Record>>(opt_entry);
+            std::visit(
+                overloaded{[&](const link::PrimaryEntryLink &link) {
+                               fmt::print("Entry found in primary.\nlocation: "
+                                          "{}, entry: {}\n\n",
+                                          static_cast<std::string>(link),
+                                          static_cast<std::string>(entry));
+                           },
+                           [&](const link::OverflowEntryLink &link) {
+                               fmt::print("Entry found in overflow.\nlocation: "
+                                          "{}, entry: {}\n\n",
+                                          static_cast<std::string>(link),
+                                          static_cast<std::string>(entry));
+                           }},
+                var_link);
+        } else {
+            fmt::print("Entry not found.\n\n");
+        }
+    }
+
+    void Update(key::Key key, const Record &record) {
+        auto &&[opt_entry, var_link] = FindEntry(key);
+        if (opt_entry) {
+            auto updated_entry = wr::get_ref<const Entry<Record>>(opt_entry);
+            updated_entry.record = record;
+            std::visit(overloaded{[&](const link::PrimaryEntryLink &link) {
+                                      primary_.Insert(updated_entry, link);
+                                  },
+                                  [&](const link::OverflowEntryLink &link) {
+                                      overflow_.Insert(updated_entry, link);
+                                  }},
+                       var_link);
         }
     }
 };

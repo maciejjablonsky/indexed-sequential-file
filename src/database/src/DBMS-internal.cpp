@@ -44,28 +44,38 @@ void db::DBMSInternal::Run() {
 
 void db::DBMSInternal::DispatchCommand(commands::possible_command &&command) {
     std::visit(
-        overloaded{
-            [&](commands::command_read &&c) {
-                fmt::print("Reading record - key: {}\n",
-                           static_cast<std::string>(c.key));
-            },
-            [&](commands::command_insert &&c) { db_.Insert(c.key, c.record); },
-            [](commands::command_reorganize &&c) {
-                fmt::print("Reorganizing files\n");
-            },
-            [&](commands::command_show &&c) {},
-            [](commands::command_exit &&c) { fmt::print("Exiting\n"); },
-            [](commands::command_unknown &&c) {
-                fmt::print("Unknown command\n");
-            },
-            [](commands::command_delete &&c) {
-                fmt::print("Deleting record - key: {}\n",
-                           static_cast<std::string>(c.key));
-            },
-            [](commands::command_update &&c) {
-                fmt::print("Updating record - key: {} with {} value\n",
-                           static_cast<std::string>(c.key),
-                           static_cast<std::string>(c.record));
-            }},
+        overloaded{[&](commands::command_read &&c) {
+                       if (c.key.IsValid()) {
+                           db_.Read(c.key);
+                       } else {
+                           fmt::print("Invalid key.\n");
+                       }
+                   },
+                   [&](commands::command_insert &&c) {
+                       if (c.key.IsValid()) {
+                           db_.Insert(c.key, c.record);
+                       } else {
+                           fmt::print("Invalid key.\n");
+                       }
+                   },
+                   [](commands::command_reorganize &&c) {
+                       fmt::print("Reorganizing files\n");
+                   },
+                   [&](commands::command_show &&c) { db_.Show(); },
+                   [](commands::command_exit &&c) { fmt::print("Exiting\n"); },
+                   [](commands::command_unknown &&c) {
+                       fmt::print("Unknown command\n");
+                   },
+                   [](commands::command_delete &&c) {
+                       fmt::print("Deleting record - key: {}\n",
+                                  static_cast<std::string>(c.key));
+                   },
+                   [&](commands::command_update &&c) {
+                       if (c.key.IsValid()) {
+                           db_.Update(c.key, c.record);
+                       } else {
+                           fmt::print("Invalid key.\n");
+                       }
+                   }},
         std::move(command));
 }

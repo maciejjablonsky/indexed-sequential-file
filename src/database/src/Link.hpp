@@ -27,7 +27,7 @@ struct EntryLink {
     int32_t entry;
     operator bool() const { return page >= 0 && entry >= 0; }
     operator std::string() const {
-        return fmt::format("{{page: {}, entry: {}}}", page, entry);
+        return fmt::format("{{page: {:>4}, entry: {:>4}}}", page, entry);
     }
 };
 

@@ -3,7 +3,6 @@
 #include "Area.hpp"
 #include "Link.hpp"
 #include <concepts/comparable.hpp>
-#include <database/Key.hpp>
 #include <overloaded/overloaded.hpp>
 
 namespace primary {
@@ -13,7 +12,9 @@ template <typename Entry> concept primary_concept = requires(Entry entry) {
         std::is_convertible_v<Entry, bool>;
 };
 
-struct EntryAlreadyInPrimary {};
+struct EntryAlreadyInPrimary {
+    link::PrimaryEntryLink link;
+};
 
 struct EntryInserted {};
 
@@ -25,6 +26,11 @@ struct EntryToPrimary {};
 struct EntryInsertedOnNewPage {
     link::PrimaryPageLink link;
 };
+
+struct EntryMightBeInOverflow {
+    link::OverflowEntryLink start_link;
+};
+struct EntryNotFound {};
 
 template <typename Entry>
 requires primary_concept<Entry> class Primary : public area::Area<Entry> {
@@ -63,6 +69,34 @@ requires primary_concept<Entry> class Primary : public area::Area<Entry> {
             entry_link = std::move(entry_link_);
         }
         return EntryToPrimary{};
+    }
+
+    template <typename Key>
+    std::variant<EntryAlreadyInPrimary, EntryMightBeInOverflow, EntryNotFound>
+    LookThrough(Key key, link::PrimaryPageLink page_link) {
+        link::EntryLink entry_link = {.page = page_link, .entry = 0};
+        auto opt_entry = View(entry_link);
+        link::EntryLink prev_link = entry_link;
+        while (opt_entry) {
+            const auto &entry = wr::get_ref<const Entry>(opt_entry);
+            if (!entry.IsDeleted() && (entry > key)) {
+                const auto &prev_entry =
+                    wr::get_ref<const Entry>(View(prev_link));
+                if (auto opt_overflow_link = prev_entry.PointsTo()) {
+                    return EntryMightBeInOverflow{.start_link =
+                                                      *opt_overflow_link};
+                } else {
+                    return EntryNotFound{};
+                }
+            } else if (!entry.IsDeleted() && (entry == key)) {
+                return EntryAlreadyInPrimary{.link = entry_link};
+            }
+            prev_link = entry_link;
+            auto [opt_entry_, entry_link_] = ViewSubsequent(entry_link);
+            opt_entry = std::move(opt_entry_);
+            entry_link = std::move(entry_link_);
+        }
+        return EntryNotFound{};
     }
 };
 } // namespace primary

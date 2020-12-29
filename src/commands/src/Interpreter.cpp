@@ -64,6 +64,7 @@ commands::possible_command commands::Interpreter::UnzipCommandLine(
     auto command = commands::match_command_str(command_token);
     std::visit(overloaded{[&](command_read& c) { ss >> c.key; },
                           [&](command_insert& c) { ss >> c.key >> c.record; },
+                          [&](command_update &c) { ss >> c.key >> c.record; },
                           [](auto& c) {}},
                command);
     return command;

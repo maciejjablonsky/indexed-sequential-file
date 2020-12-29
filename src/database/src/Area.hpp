@@ -113,8 +113,10 @@ template <typename Entry> class Area {
 
   public:
     wr::optional_ref<const Entry> View(link::EntryLink link) const {
-        auto opt_var_page = LoadPage(link.page);
-        if (opt_var_page) {
+        if (link.page >= page_dispositor_.PagesInFile()) {
+            return std::nullopt;
+        }
+        if (auto opt_var_page = LoadPage(link.page)) {
             return std::visit(
                 overloaded{
                     [&](const auto &page) -> wr::optional_ref<const Entry> {
@@ -158,5 +160,22 @@ template <typename Entry> class Area {
         MoveLoadedToBuffer(); // saves loaded as buffered page and moves
                               // nullopt to buffer
     };
+
+    void Show() {
+        link::EntryLink link = {0, 0};
+        auto opt_entry = View(link);
+        if (!opt_entry) {
+            return;
+        }
+        do {
+            fmt::print("location: {}, entry: {}\n",
+                       static_cast<std::string>(link),
+                       static_cast<std::string>(wr::get_ref<const Entry>(opt_entry)));
+            auto [opt_entry_, link_] = ViewSubsequent(link);
+            opt_entry = std::move(opt_entry_);
+            link = std::move(link_);
+        } while (opt_entry);
+        fmt::print("\n");
+    }
 };
 } // namespace area

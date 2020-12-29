@@ -4,7 +4,9 @@
 #include <wrappers/optref.hpp>
 
 namespace overflow {
-struct EntryAlreadyInOverflow {};
+struct EntryAlreadyInOverflow {
+    link::OverflowEntryLink link;
+};
 
 struct AppendWithoutPointing {
     link::OverflowEntryLink update;
@@ -18,6 +20,8 @@ struct AppendWithPointing {
 struct FirstWasLarger {
     link::OverflowEntryLink point;
 };
+
+struct EntryNotFound {};
 
 struct EmptyOverflow {};
 template <typename Entry> concept overflow_concept = requires(Entry entry) {
@@ -64,6 +68,33 @@ requires overflow_concept<Entry> class Overflow : public area::Area<Entry> {
     link::OverflowEntryLink Append(const Entry &entry) {
         auto link = PushBack(entry);
         return {link.page, link.entry};
+    }
+
+    template <typename Key>
+    std::variant<EntryAlreadyInOverflow, EntryNotFound>
+    LookThrough(Key key, link::EntryLink entry_link) {
+        auto opt_entry = View(entry_link);
+        link::EntryLink prev_link = entry_link;
+        while (opt_entry) {
+            const auto &entry = wr::get_ref<const Entry>(opt_entry);
+            if (!entry.IsDeleted() && (entry > key)) {
+                return EntryNotFound{};
+            } else if (!entry.IsDeleted() && (entry == key)) {
+                return EntryAlreadyInOverflow{.link = entry_link};
+            }
+            prev_link = entry_link;
+            if (auto opt_link = entry.PointsTo()) {
+                entry_link = *opt_link; 
+            } else {
+                break; 
+            }
+
+            auto [opt_entry_, entry_link_] = ViewSubsequent(entry_link);
+            opt_entry = std::move(opt_entry_);
+            entry_link = std::move(entry_link_);
+        }
+        return EntryNotFound{};
+ 
     }
 };
 } // namespace overflow
