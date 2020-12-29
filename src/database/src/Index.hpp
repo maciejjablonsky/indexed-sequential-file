@@ -144,7 +144,7 @@ template <typename Key> requires index_concept<Key> class Index {
         }
     }
     void Show() {
-        fmt::print("[{:^60}]\n", "INDEX");
+        fmt::print("[{:^131}]\n", "INDEX");
         for (const auto &[key, link] : page_links_) {
             fmt::print("[key: {:>4}, page: {:>4}]\n", static_cast<std::string>(key),
                        link);

@@ -66,9 +66,12 @@ void db::DBMSInternal::DispatchCommand(commands::possible_command &&command) {
                    [](commands::command_unknown &&c) {
                        fmt::print("Unknown command\n");
                    },
-                   [](commands::command_delete &&c) {
-                       fmt::print("Deleting record - key: {}\n",
-                                  static_cast<std::string>(c.key));
+                   [&](commands::command_delete &&c) {
+                       if (c.key.IsValid()) {
+                           db_.Delete(c.key);
+                       } else {
+                           fmt::print("Invalid key.\n");
+                       }
                    },
                    [&](commands::command_update &&c) {
                        if (c.key.IsValid()) {

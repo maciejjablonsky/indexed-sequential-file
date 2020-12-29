@@ -185,7 +185,7 @@ template <typename Record> requires database_concept<Record> class DataBase {
         primary_.Save();
         overflow_.Save();
     }
-    void Insert(key::Key key, const Record &record) {
+    void Insert(const key::Key &key, const Record &record) {
         db::Entry<Record> new_entry = {
             .key = key, .record = record, .link = {-1, -1}, .deleted = false};
         auto primary_page_link = index_.LookUp(key);
@@ -211,13 +211,13 @@ template <typename Record> requires database_concept<Record> class DataBase {
     }
     void Show() {
         index_.Show();
-        fmt::print("[{:^60}]\n", "PRIMARY");
+        fmt::print("[{:^131}]\n", "PRIMARY");
         primary_.Show();
-        fmt::print("[{:^60}]\n", "OVERFLOW");
+        fmt::print("[{:^131}]\n", "OVERFLOW");
         overflow_.Show();
     }
 
-    void Read(key::Key key) {
+    void Read(const key::Key &key) {
         auto &&[opt_entry, var_link] = FindEntry(key);
         if (opt_entry) {
             const auto &entry = wr::get_ref<const Entry<Record>>(opt_entry);
@@ -240,7 +240,7 @@ template <typename Record> requires database_concept<Record> class DataBase {
         }
     }
 
-    void Update(key::Key key, const Record &record) {
+    void Update(const key::Key &key, const Record &record) {
         auto &&[opt_entry, var_link] = FindEntry(key);
         if (opt_entry) {
             auto updated_entry = wr::get_ref<const Entry<Record>>(opt_entry);
@@ -252,6 +252,27 @@ template <typename Record> requires database_concept<Record> class DataBase {
                                       overflow_.Insert(updated_entry, link);
                                   }},
                        var_link);
+        } else {
+            fmt::print("Entry with key [{}] not found.\n",
+                       static_cast<std::string>(key));
+        }
+    }
+
+    void Delete(const key::Key &key) {
+        auto &&[opt_entry, var_link] = FindEntry(key);
+        if (opt_entry) {
+            auto updated_entry = wr::get_ref<const Entry<Record>>(opt_entry);
+            updated_entry.deleted = true;
+            std::visit(overloaded{[&](const link::PrimaryEntryLink &link) {
+                                      primary_.Insert(updated_entry, link);
+                                  },
+                                  [&](const link::OverflowEntryLink &link) {
+                                      overflow_.Insert(updated_entry, link);
+                                  }},
+                       var_link);
+        } else {
+            fmt::print("Entry with key [{}] not found.\n",
+                       static_cast<std::string>(key));
         }
     }
 };
