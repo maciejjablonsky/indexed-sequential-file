@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts/memory_access.hpp>
+#include <fmt/format.h>
 #include <stdexcept>
 #include <vector>
 #include <wrappers/optref.hpp>
@@ -30,8 +31,8 @@ requires page_with_entries<PageMemory, Entry> class PageWithEntries {
         : memory_(std::move(page)),
           header_(reinterpret_cast<Header *>(memory_.data())) {}
 
-    inline size_t Capacity() const {
-        return (PageMemory::size - sizeof(*header_)) / sizeof(Entry);
+    static inline size_t Capacity() {
+        return (PageMemory::size - sizeof(Header)) / sizeof(Entry);
     }
     inline size_t Size() const { return header_ ? header_->entries : 0; }
     inline size_t Index() const { return memory_.Index(); }
@@ -59,6 +60,15 @@ class CleanPageWithEntries : public PageWithEntries<PageMemory, Entry> {
   public:
     inline CleanPageWithEntries(PageMemory &&page)
         : PageWithEntries<PageMemory, Entry>(std::move(page)) {}
+    void Show() const {
+        fmt::print("[CLEAN] index: {}, size: {}, capacity: {}\n", Index(),
+                   Size(), Capacity());
+        for (auto i = 0; i < Size(); ++i) {
+            fmt::print(
+                "[{}] {}\n", i,
+                static_cast<std::string>(wr::get_ref<const Entry>(View(i))));
+        }
+    }
 };
 
 template <typename PageMemory, typename Entry>
@@ -66,6 +76,16 @@ class DirtyPageWithEntries : public PageWithEntries<PageMemory, Entry> {
   public:
     DirtyPageWithEntries(CleanPageWithEntries<PageMemory, Entry> &&clean_page)
         : PageWithEntries<PageMemory, Entry>(clean_page.Release()) {}
+    void Show() const {
+        fmt::print("[DIRTY] index: {}, size: {}, capacity: {}\n", Index(),
+                   Size(), Capacity());
+        for (auto i = 0; i < Size(); ++i) {
+            fmt::print(
+                "[{}] {}\n", i,
+                static_cast<std::string>(wr::get_ref<const Entry>(View(i))));
+        }
+    }
+
     void Write(const Entry &entry, size_t idx) {
         if (idx > Size()) {
             throw std::out_of_range("Attempted to write behind page index.");

@@ -6,6 +6,7 @@
 #include <commands/source.hpp>
 #include <database/Record.hpp>
 #include <string_view>
+#include <sstream>
 
 namespace db {
 class DBMSInternal {
@@ -16,7 +17,9 @@ class DBMSInternal {
     void DispatchCommand(commands::possible_command &&command);
 
   private:
+    std::string database_prefix_;
     DataBase<record::Record> db_;
     commands::Interpreter commands_interpreter_;
+    std::stringstream disk_metrics_csv_;
 };
 } // namespace db

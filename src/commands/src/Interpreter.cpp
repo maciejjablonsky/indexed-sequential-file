@@ -37,8 +37,10 @@ void commands::Interpreter::LoadCommands() {
                    source_);
     commands_queue_.push(UnzipCommandLine(command_line));
     std::visit(overloaded{[&](const commands::Prompt &) {
-                              if (!std::holds_alternative<command_show>(
-                                      commands_queue_.back())) {
+                              if (!(std::holds_alternative<command_show>(
+                                        commands_queue_.back()) ||
+                                    std::holds_alternative<command_show_sorted>(
+                                        commands_queue_.back()))) {
                                   commands_queue_.push(command_show{});
                               }
                           },

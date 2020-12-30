@@ -89,9 +89,7 @@ requires overflow_concept<Entry> class Overflow : public area::Area<Entry> {
                 break; 
             }
 
-            auto [opt_entry_, entry_link_] = ViewSubsequent(entry_link);
-            opt_entry = std::move(opt_entry_);
-            entry_link = std::move(entry_link_);
+            opt_entry = View(entry_link);
         }
         return EntryNotFound{};
  

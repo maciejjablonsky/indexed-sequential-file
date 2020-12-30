@@ -3,6 +3,7 @@
 #include "Link.hpp"
 #include "Memory.hpp"
 #include "PageDispositor.hpp"
+#include <algorithm>
 #include <concepts/comparable.hpp>
 #include <map>
 #include <string>
@@ -39,7 +40,7 @@ template <typename Key> requires index_concept<Key> class Index {
   public:
     [[nodiscard]] std::tuple<size_t, size_t>
     Setup(const std::string &file_path) {
-        if (!page_dispositor_.Setup(file_path)) {
+        if (!page_dispositor_.AttachFile(file_path)) {
             throw std::runtime_error(
                 "Failed to setup page_dispositor for database index.");
         }
@@ -51,8 +52,11 @@ template <typename Key> requires index_concept<Key> class Index {
             return {0, 0};
         }
     }
-    [[nodiscard]] link::PrimaryPageLink LookUp(const Key key) const {
-        auto it = page_links_.lower_bound(key);
+    [[nodiscard]] link::PrimaryPageLink LookUp(Key key) const {
+        auto it = std::adjacent_find(page_links_.begin(), page_links_.end(),
+                                     [&](const auto &lhs, const auto &rhs) {
+                                         return lhs.first <= key && key < rhs.first;
+                                     });
         if (it == page_links_.cend()) {
             --it;
         }
@@ -144,12 +148,16 @@ template <typename Key> requires index_concept<Key> class Index {
         }
     }
     void Show() {
-        fmt::print("[{:^131}]\n", "INDEX");
+        fmt::print("[{:^91}]\n", "INDEX");
         for (const auto &[key, link] : page_links_) {
-            fmt::print("[key: {:>4}, page: {:>4}]\n", static_cast<std::string>(key),
-                       link);
+            fmt::print("[key: {:>4}, page: {:>4}]\n",
+                       static_cast<std::string>(key), link);
         }
         fmt::print("\n");
+    }
+    void Clear() {
+        page_links_.clear();
+        page_dispositor_.ClearFile();
     }
 };
 } // namespace index

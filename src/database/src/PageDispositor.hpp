@@ -17,7 +17,7 @@ template <typename Memory> requires memory_access<Memory> class PageDispositor {
     std::string file_path_;
     size_t pages_in_file_;
     std::unique_ptr<std::fstream> file_;
-    DiskAccess counter_;
+    DiskAccess counter_ = {0, 0};
 
   private:
     Memory Make() {
@@ -27,7 +27,7 @@ template <typename Memory> requires memory_access<Memory> class PageDispositor {
     }
 
   public:
-    bool Setup(const std::string &file_path) {
+    bool AttachFile(const std::string &file_path) {
         file_path_ = file_path;
         if (std::filesystem::exists(file_path)) {
             file_ = std::make_unique<std::fstream>(
@@ -88,6 +88,16 @@ template <typename Memory> requires memory_access<Memory> class PageDispositor {
                     fmt::format("Failed to open file at: {}\n", file_path_));
             }
             pages_in_file_ = 0;
+        }
+    }
+    inline DiskAccess GetDiskAccessCounter() const { return counter_; }
+    inline void SetDiskAccessCounter(const DiskAccess &new_counter) {
+        counter_ = new_counter;
+    }
+
+    inline void CloseFile() {
+        if (file_) {
+            file_.reset();
         }
     }
 };

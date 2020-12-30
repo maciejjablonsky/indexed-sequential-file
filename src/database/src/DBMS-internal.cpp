@@ -9,15 +9,23 @@ db::DBMSInternal::DBMSInternal(const std::string &database_name,
     std::filesystem::create_directory(database_name);
     std::filesystem::path path = database_name;
     path /= database_name;
+    database_prefix_ = path.string();
     try {
-        db_.Setup(path.string());
+        db_.Setup(database_prefix_);
+        disk_metrics_csv_ << fmt::format(
+            "primary_reads,primary_writes,primary_all,overflow_reads,overflow_"
+            "writes,overflow_all,all_reads,all_writes,all\n");
     } catch (const std::exception &e) {
         throw std::runtime_error(fmt::format(
             "Failed to initialize database. Message:\n{}", e.what()));
     }
 }
 
-db::DBMSInternal::~DBMSInternal() { db_.Save(); }
+db::DBMSInternal::~DBMSInternal() { 
+    db_.Save();
+    std::ofstream ofs(database_prefix_ + "_disk_access.csv");
+    ofs << disk_metrics_csv_.rdbuf();
+}
 
 void db::DBMSInternal::Run() {
     enum class process {
@@ -50,6 +58,7 @@ void db::DBMSInternal::DispatchCommand(commands::possible_command &&command) {
                        } else {
                            fmt::print("Invalid key.\n");
                        }
+                       db_.DumpDiskAccessMetric(disk_metrics_csv_);
                    },
                    [&](commands::command_insert &&c) {
                        if (c.key.IsValid()) {
@@ -57,9 +66,12 @@ void db::DBMSInternal::DispatchCommand(commands::possible_command &&command) {
                        } else {
                            fmt::print("Invalid key.\n");
                        }
+                       db_.DumpDiskAccessMetric(disk_metrics_csv_);
                    },
-                   [](commands::command_reorganize &&c) {
+                   [&](commands::command_reorganize &&c) {
                        fmt::print("Reorganizing files\n");
+                       db_.Reorganize();
+                       db_.DumpDiskAccessMetric(disk_metrics_csv_);
                    },
                    [&](commands::command_show &&c) { db_.Show(); },
                    [](commands::command_exit &&c) { fmt::print("Exiting\n"); },
@@ -72,6 +84,7 @@ void db::DBMSInternal::DispatchCommand(commands::possible_command &&command) {
                        } else {
                            fmt::print("Invalid key.\n");
                        }
+                       db_.DumpDiskAccessMetric(disk_metrics_csv_);
                    },
                    [&](commands::command_update &&c) {
                        if (c.key.IsValid()) {
@@ -79,6 +92,8 @@ void db::DBMSInternal::DispatchCommand(commands::possible_command &&command) {
                        } else {
                            fmt::print("Invalid key.\n");
                        }
-                   }},
+                       db_.DumpDiskAccessMetric(disk_metrics_csv_);
+                   },
+                   [&](commands::command_show_sorted &&) { db_.ShowSorted(); }},
         std::move(command));
 }

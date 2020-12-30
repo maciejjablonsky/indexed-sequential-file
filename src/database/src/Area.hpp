@@ -49,7 +49,8 @@ template <typename Entry> class Area {
         if (loaded_page_ && is_page_loaded(*loaded_page_)) {
             return *loaded_page_;
         } else if (buffered_page_ && is_page_loaded(*buffered_page_)) {
-            return *buffered_page_;
+            std::swap(loaded_page_, buffered_page_);
+            return *loaded_page_;
         } else {
             MoveLoadedToBuffer();
             auto opt_page = page_dispositor_.Request(page_no);
@@ -61,19 +62,6 @@ template <typename Entry> class Area {
                 return std::nullopt;
             }
         }
-    }
-    std::pair<wr::optional_ref<const Entry>, link::EntryLink>
-    ViewSubsequent(link::EntryLink &link) const {
-        link::EntryLink next_entry = {.page = link.page,
-                                      .entry = link.entry + 1};
-        if (auto opt_ref_entry = View(next_entry)) {
-            return {opt_ref_entry, next_entry};
-        }
-        link::EntryLink next_page_entry = {.page = link.page + 1, .entry = 0};
-        if (auto opt_ref_entry = View(next_page_entry)) {
-            return {opt_ref_entry, next_page_entry};
-        }
-        return {std::nullopt, link};
     }
     std::optional<link::EntryLink> AppendToPage(const Entry &entry,
                                                 link::PageLink link) {
@@ -112,6 +100,31 @@ template <typename Entry> class Area {
     }
 
   public:
+    link::EntryLink IncrementLinkToExistingEntry(link::EntryLink link) {
+        link::EntryLink area_link = link;
+        if (link.entry < LoadedPageSize() - 1) {
+            area_link.entry += 1;
+        } else {
+            area_link.page += 1;
+            area_link.entry = 0;
+        }
+        return area_link;
+    }
+
+    std::pair<wr::optional_ref<const Entry>, link::EntryLink>
+    ViewSubsequent(const link::EntryLink &link) const {
+        link::EntryLink next_entry = {.page = link.page,
+                                      .entry = link.entry + 1};
+        if (auto opt_ref_entry = View(next_entry)) {
+            return {opt_ref_entry, next_entry};
+        }
+        link::EntryLink next_page_entry = {.page = link.page + 1, .entry = 0};
+        if (auto opt_ref_entry = View(next_page_entry)) {
+            return {opt_ref_entry, next_page_entry};
+        }
+        return {std::nullopt, link};
+    }
+
     wr::optional_ref<const Entry> View(link::EntryLink link) const {
         if (link.page >= page_dispositor_.PagesInFile()) {
             return std::nullopt;
@@ -150,7 +163,7 @@ template <typename Entry> class Area {
     }
 
     inline void Setup(const std::string &file_path, size_t stored_entries = 0) {
-        page_dispositor_.Setup(file_path);
+        page_dispositor_.AttachFile(file_path);
         stored_entries_ = stored_entries;
     };
     inline size_t Size() const { return stored_entries_; }
@@ -159,23 +172,57 @@ template <typename Entry> class Area {
                               // loaded to buffered
         MoveLoadedToBuffer(); // saves loaded as buffered page and moves
                               // nullopt to buffer
+        loaded_page_ = buffered_page_ = std::nullopt;
     };
 
     void Show() {
-        link::EntryLink link = {0, 0};
-        auto opt_entry = View(link);
-        if (!opt_entry) {
-            return;
+        for (auto i = 0; i < page_dispositor_.PagesInFile(); ++i) {
+            auto opt_page = LoadPage(i); 
+            if (opt_page) {
+                std::visit(overloaded{[](const auto &page) { page.Show(); }},
+                           wr::get_ref<entries_page>(opt_page)); 
+            }
+
         }
-        do {
-            fmt::print("location: {}, entry: {}\n",
-                       static_cast<std::string>(link),
-                       static_cast<std::string>(wr::get_ref<const Entry>(opt_entry)));
-            auto [opt_entry_, link_] = ViewSubsequent(link);
-            opt_entry = std::move(opt_entry_);
-            link = std::move(link_);
-        } while (opt_entry);
         fmt::print("\n");
+    }
+
+    inline DiskAccess GetDiskAccesses() const {
+        return page_dispositor_.GetDiskAccessCounter();
+    }
+
+    inline void SetDiskAccesses(const DiskAccess &counter) {
+        page_dispositor_.SetDiskAccessCounter(counter);
+    }
+
+    void Clear() {
+        loaded_page_ = buffered_page_ = std::nullopt;
+        page_dispositor_.ClearFile();
+        stored_entries_ = 0;
+    }
+
+    void RenameAndSwapFile(const std::string &from, const std::string &to,
+                           DiskAccess external_counter = {0, 0}, size_t size = 0) {
+        Save();
+        page_dispositor_.CloseFile();
+        std::filesystem::remove(to);
+        std::filesystem::rename(from, to);
+        page_dispositor_.AttachFile(to);
+        SetDiskAccesses(GetDiskAccesses() + external_counter);
+        stored_entries_ = size;
+    }
+
+    inline size_t SinglePageCapacity() const {
+        return clean_entries_page::Capacity();
+    }
+
+    inline size_t LoadedPageSize() const {
+        if (loaded_page_) {
+            return std::visit(
+                overloaded{[&](const auto &page) { return page.Size(); }},
+                *loaded_page_);
+        }
+        return 0;
     }
 };
 } // namespace area

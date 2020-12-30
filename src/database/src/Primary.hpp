@@ -64,6 +64,7 @@ requires primary_concept<Entry> class Primary : public area::Area<Entry> {
                 return EntryAlreadyInPrimary{};
             }
             prev_link = entry_link;
+
             auto [opt_entry_, entry_link_] = ViewSubsequent(entry_link);
             opt_entry = std::move(opt_entry_);
             entry_link = std::move(entry_link_);
@@ -92,9 +93,8 @@ requires primary_concept<Entry> class Primary : public area::Area<Entry> {
                 return EntryAlreadyInPrimary{.link = entry_link};
             }
             prev_link = entry_link;
-            auto [opt_entry_, entry_link_] = ViewSubsequent(entry_link);
-            opt_entry = std::move(opt_entry_);
-            entry_link = std::move(entry_link_);
+            entry_link = IncrementLinkToExistingEntry(entry_link);
+            opt_entry = View(entry_link); 
         }
         return EntryNotFound{};
     }

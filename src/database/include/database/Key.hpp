@@ -14,12 +14,12 @@ namespace key {
 struct Key {
     int32_t value;
     auto operator<=>(const Key &other) const = default;
-    inline decltype(value) dummy() const { return -1; }
+    static inline Key dummy() { return Key{-1}; }
     static inline decltype(value) min() { return 0; }
     static inline decltype(value) max() {
         return std::numeric_limits<decltype(value)>::max();
     }
-    inline bool IsDummy() const { return value == dummy(); }
+    inline bool IsDummy() const { return *this == dummy(); }
     operator std::string() const { return fmt::format("{:>6}", value); }
     static bool IsValid(const Key &key) {
         return Key::min() <= key.value && key.value <= Key::max();
