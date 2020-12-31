@@ -100,6 +100,8 @@ template <typename Memory> requires memory_access<Memory> class PageDispositor {
             file_.reset();
         }
     }
+
+    inline void ResetCounter() { counter_.Reset(); }
 };
 
 } // namespace page

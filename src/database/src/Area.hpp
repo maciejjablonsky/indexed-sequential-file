@@ -100,6 +100,7 @@ template <typename Entry> class Area {
     }
 
   public:
+    inline void ResetDiskAccessCounter() { page_dispositor_.ResetCounter(); }
     link::EntryLink IncrementLinkToExistingEntry(link::EntryLink link) {
         link::EntryLink area_link = link;
         if (link.entry < LoadedPageSize() - 1) {
@@ -177,12 +178,11 @@ template <typename Entry> class Area {
 
     void Show() {
         for (auto i = 0; i < page_dispositor_.PagesInFile(); ++i) {
-            auto opt_page = LoadPage(i); 
+            auto opt_page = LoadPage(i);
             if (opt_page) {
                 std::visit(overloaded{[](const auto &page) { page.Show(); }},
-                           wr::get_ref<entries_page>(opt_page)); 
+                           wr::get_ref<entries_page>(opt_page));
             }
-
         }
         fmt::print("\n");
     }
@@ -202,7 +202,8 @@ template <typename Entry> class Area {
     }
 
     void RenameAndSwapFile(const std::string &from, const std::string &to,
-                           DiskAccess external_counter = {0, 0}, size_t size = 0) {
+                           DiskAccess external_counter = {0, 0},
+                           size_t size = 0) {
         Save();
         page_dispositor_.CloseFile();
         std::filesystem::remove(to);

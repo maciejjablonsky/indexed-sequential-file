@@ -8,7 +8,7 @@
 namespace record {
 struct Record {
     uint64_t time;
-    std::byte space[4];
+    std::byte space[400];
     friend std::stringstream &operator>>(std::stringstream &ss,
                                          record::Record &record);
     inline operator std::string() const { return fmt::format("{}", time); }

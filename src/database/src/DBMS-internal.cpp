@@ -69,7 +69,6 @@ void db::DBMSInternal::DispatchCommand(commands::possible_command &&command) {
                        db_.DumpDiskAccessMetric(disk_metrics_csv_);
                    },
                    [&](commands::command_reorganize &&c) {
-                       fmt::print("Reorganizing files\n");
                        db_.Reorganize();
                        db_.DumpDiskAccessMetric(disk_metrics_csv_);
                    },

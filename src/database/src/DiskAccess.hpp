@@ -7,7 +7,10 @@ struct DiskAccess {
     inline void Read() { ++reads; }
     inline int CountWrites() const { return writes; }
     inline int CountReads() const { return reads; }
-    inline void Reset() { writes = reads = 0; }
+    inline void Reset() {
+        writes = 0;
+        reads = 0;
+    }
     inline DiskAccess &operator+=(const DiskAccess &rhs) {
         reads += rhs.reads;
         writes += rhs.writes;

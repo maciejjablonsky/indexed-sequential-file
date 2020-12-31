@@ -419,6 +419,7 @@ template <typename Record> requires database_concept<Record> class DataBase {
         auto primary_filename = prefix_ + ".primary";
         primary_.RenameAndSwapFile(reorganized_filename, primary_filename,
                                    new_disk_accesses, stored_entries);
+        ResetCounters();
     }
 
     void DumpDiskAccessMetric(std::stringstream &ss) {
@@ -436,6 +437,12 @@ template <typename Record> requires database_concept<Record> class DataBase {
                           primary_accesses.reads + primary_accesses.writes +
                               overflow_accesses.reads +
                               overflow_accesses.writes);
+        primary_.ResetDiskAccessCounter();
+        overflow_.ResetDiskAccessCounter();
+    }
+    void ResetCounters() {
+        primary_.ResetDiskAccessCounter();
+        overflow_.ResetDiskAccessCounter();
     }
 };
-} // namespace db
+} 
